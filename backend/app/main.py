@@ -54,9 +54,15 @@ async def health_check():
     return {"status": "ok", "service": "waypoint-api"}
 
 
-# --- Routers (added incrementally as modules are built) ---
-# Phase 2+ will add:
-#   app.include_router(routes_auth.router, prefix="/api/auth", tags=["auth"])
-#   app.include_router(routes_opportunities.router, prefix="/api/opportunities", tags=["opportunities"])
-#   app.include_router(routes_roadmap.router, prefix="/api/roadmaps", tags=["roadmaps"])
-#   app.include_router(routes_feedback.router, prefix="/api/steps", tags=["feedback"])
+from app.api import (
+    auth_router,
+    opportunities_router,
+    roadmap_router,
+    feedback_router,
+)
+
+# --- Routers ---
+app.include_router(auth_router)
+app.include_router(opportunities_router)
+app.include_router(roadmap_router)
+app.include_router(feedback_router)

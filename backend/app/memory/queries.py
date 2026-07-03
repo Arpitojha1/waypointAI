@@ -46,6 +46,8 @@ async def recall_for_job(
             parts.append(f"Company: {job_context['company']}")
         if job_context.get("skills"):
             parts.append(f"Required skills: {', '.join(job_context['skills'])}")
+        if job_context.get("description"):
+            parts.append(f"Description: {job_context['description']}")
         augmented_query = " | ".join(parts)
 
     # Search across relevant datasets
@@ -88,6 +90,8 @@ async def recall_for_hackathon(
             parts.append(f"Topics: {', '.join(hackathon_context['topics'])}")
         if hackathon_context.get("deadline"):
             parts.append(f"Deadline: {hackathon_context['deadline']}")
+        if hackathon_context.get("description"):
+            parts.append(f"Description: {hackathon_context['description']}")
         augmented_query = " | ".join(parts)
 
     datasets = _build_dataset_list(user_id, ["user_profile", "hackathon", "feedback"])
@@ -131,6 +135,8 @@ async def recall_for_issue(
             parts.append(f"Labels: {', '.join(issue_context['labels'])}")
         if issue_context.get("language"):
             parts.append(f"Language: {issue_context['language']}")
+        if issue_context.get("description"):
+            parts.append(f"Description: {issue_context['description']}")
         augmented_query = " | ".join(parts)
 
     datasets = _build_dataset_list(user_id, ["user_profile", "issue", "feedback"])
@@ -149,7 +155,16 @@ async def recall_for_issue(
 # ---------------------------------------------------------------------------
 
 def _build_dataset_list(user_id: Optional[str], types: list[str]) -> list[str]:
-    """Build user-scoped dataset names for Cognee queries."""
-    if user_id:
-        return [f"{user_id}_{t}" for t in types]
-    return types
+    """Build user-scoped and shared dataset names for Cognee queries."""
+    shared_types = {"job", "hackathon", "issue"}
+    result = []
+    for t in types:
+        if t in shared_types:
+            result.append(t)
+            if user_id:
+                result.append(f"{user_id}_{t}")
+        elif user_id:
+            result.append(f"{user_id}_{t}")
+        else:
+            result.append(t)
+    return list(dict.fromkeys(result))

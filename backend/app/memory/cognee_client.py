@@ -25,7 +25,9 @@ Feedback flow:
 ═══════════════════════════════════════════════════════════════════════════
 """
 
+import asyncio
 import logging
+import time
 import uuid
 from typing import Any, Dict, List, Optional, Union
 
@@ -37,8 +39,8 @@ logger = logging.getLogger(__name__)
 
 async def configure_cognee(
     llm_api_key: str,
-    llm_provider: str = "openai",
-    llm_model: str = "gpt-4o-mini",
+    llm_provider: str = "openrouter",
+    llm_model: str = "nvidia/nemotron-3-super-120b-a12b:free",
 ) -> None:
     """
     Initialize Cognee's LLM and storage configuration.
@@ -96,12 +98,21 @@ async def remember(
         ds_name, session_id, len(text),
     )
 
-    result = await cognee.remember(
-        text,
-        dataset_name=ds_name,
-        session_id=session_id,
-        self_improvement=True,
-    )
+    t0 = time.perf_counter()
+    try:
+        result = await asyncio.wait_for(
+            cognee.remember(
+                text,
+                dataset_name=ds_name,
+                session_id=session_id,
+                self_improvement=True,
+            ),
+            timeout=30.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("PERF: [cognee.remember] TIMEOUT 30s dataset=%s", ds_name)
+        return None
+    logger.info("PERF: [cognee.remember] dataset=%s %.3fs", ds_name, time.perf_counter() - t0)
 
     return result
 
@@ -161,7 +172,16 @@ async def recall(
     if session_id:
         kwargs["session_id"] = session_id
 
-    results = await cognee.recall(**kwargs)
+    t0 = time.perf_counter()
+    try:
+        results = await asyncio.wait_for(
+            cognee.recall(**kwargs),
+            timeout=30.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("PERF: [cognee.recall] TIMEOUT 30s")
+        return []
+    logger.info("PERF: [cognee.recall] %.3fs", time.perf_counter() - t0)
     return results
 
 
@@ -217,15 +237,19 @@ async def improve(
     if user_id:
         ds_name = f"{user_id}_{ds_name}"
 
-    await cognee.improve(
-        dataset=ds_name,
-        session_ids=[session_id] if session_id else None,
-    )
-
-    logger.info(
-        "cognee.improve: enrichment complete for dataset=%s session=%s",
-        ds_name, session_id,
-    )
+    t0 = time.perf_counter()
+    try:
+        await asyncio.wait_for(
+            cognee.improve(
+                dataset=ds_name,
+                session_ids=[session_id] if session_id else None,
+            ),
+            timeout=30.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("PERF: [cognee.improve] TIMEOUT 30s dataset=%s", ds_name)
+        return
+    logger.info("PERF: [cognee.improve] dataset=%s %.3fs", ds_name, time.perf_counter() - t0)
 
 
 # ---------------------------------------------------------------------------
@@ -276,8 +300,16 @@ async def forget(
     if memory_only:
         kwargs["memory_only"] = True
 
-    result = await cognee.forget(**kwargs)
-    logger.info("cognee.forget: dataset=%s data_id=%s result=%s", ds_name, data_id, result)
+    t0 = time.perf_counter()
+    try:
+        result = await asyncio.wait_for(
+            cognee.forget(**kwargs),
+            timeout=30.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("PERF: [cognee.forget] TIMEOUT 30s dataset=%s", ds_name)
+        return {"status": "timeout"}
+    logger.info("PERF: [cognee.forget] dataset=%s %.3fs", ds_name, time.perf_counter() - t0)
     return result
 
 

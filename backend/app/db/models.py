@@ -22,6 +22,7 @@ from sqlalchemy import (
     Integer,
     Enum as SAEnum,
     func,
+    LargeBinary,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -76,6 +77,9 @@ class UserProfile(Base):
     experience_summary: Mapped[Optional[str]] = mapped_column(Text)
     projects: Mapped[Optional[list]] = mapped_column(JSONB, default=list)
     preferences: Mapped[Optional[dict]] = mapped_column(JSONB, default=dict)
+    byok_key_encrypted: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
+    byok_model: Mapped[Optional[str]] = mapped_column(String(255))
+    byok_endpoint: Mapped[Optional[str]] = mapped_column(String(500))
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -106,7 +110,7 @@ class Opportunity(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     type: Mapped[OpportunityType] = mapped_column(
-        SAEnum(OpportunityType, name="opportunity_type", create_constraint=True),
+        SAEnum(OpportunityType, name="opportunity_type", values_callable=lambda obj: [e.value for e in obj], create_constraint=True),
         nullable=False, index=True,
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -169,6 +173,9 @@ class Roadmap(Base):
     # Track generation version for memify comparison
     version: Mapped[int] = mapped_column(Integer, default=1)
 
+    # Phase 3: Track whether Cognee memory seeding is complete for this roadmap
+    cognee_seeded: Mapped[bool] = mapped_column(default=False)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -214,7 +221,7 @@ class Step(Base):
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     status: Mapped[StepStatus] = mapped_column(
-        SAEnum(StepStatus, name="step_status", create_constraint=True),
+        SAEnum(StepStatus, name="step_status", values_callable=lambda obj: [e.value for e in obj], create_constraint=True),
         default=StepStatus.PENDING,
     )
 

@@ -14,8 +14,10 @@ from jose import JWTError, jwt
 
 from app.config import settings
 
+import os
+
 # Bearer token extractor
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 # Supabase JWT config
 ALGORITHM = "HS256"
@@ -35,21 +37,32 @@ class AuthenticatedUser:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> AuthenticatedUser:
     """
     FastAPI dependency: decode & verify a Supabase JWT.
 
     Returns an AuthenticatedUser with user_id (sub claim).
     Raises 401 if the token is missing, expired, or invalid.
+    Bypasses auth if ENABLE_BACKEND_ACCESS_CONTROL is set to 'false'.
     """
-    token = credentials.credentials
+    if os.environ.get("ENABLE_BACKEND_ACCESS_CONTROL", "true").lower() == "false":
+        return AuthenticatedUser(
+            user_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+            email="dev@waypoint.local",
+            role="authenticated",
+        )
 
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired authentication token",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if not credentials or not credentials.credentials:
+        raise credentials_exception
+
+    token = credentials.credentials
 
     try:
         payload = jwt.decode(

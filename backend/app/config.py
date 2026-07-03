@@ -26,12 +26,15 @@ class Settings(BaseSettings):
     # --- Cognee ---
     COGNEE_API_KEY: str = ""  # Cognee Cloud key, if using hosted
     COGNEE_LLM_API_KEY: str = ""  # LLM provider key for Cognee's internal use
-    COGNEE_LLM_PROVIDER: str = "openai"  # or "anthropic", "openrouter"
-    COGNEE_LLM_MODEL: str = "gpt-4o-mini"  # model Cognee uses internally
+    COGNEE_LLM_PROVIDER: str = "openrouter"  # or "anthropic", "openai"
+    COGNEE_LLM_MODEL: str = "nvidia/nemotron-3-super-120b-a12b:free"  # model Cognee uses internally
     COGNEE_VECTOR_DB: str = "lancedb"  # default local vector store
 
     # --- OpenRouter (BYOK fallback) ---
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    OPENROUTER_MODEL: str = "nvidia/nemotron-3-super-120b-a12b:free"
+    LLM_API_KEY: str = ""
+    LLM_MODEL: str = ""
 
     # --- Anthropic (primary LLM for orchestrator) ---
     ANTHROPIC_API_KEY: str = ""
@@ -40,7 +43,7 @@ class Settings(BaseSettings):
     MASTER_KEY: str  # AES-256 key for pgcrypto BYOK encryption
 
     model_config = {
-        "env_file": ".env",
+        "env_file": (".env", "backend/.env", "../.env"),
         "env_file_encoding": "utf-8",
         "case_sensitive": True,
         "extra": "ignore",

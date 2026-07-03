@@ -21,8 +21,8 @@ python-jose[cryptography]>=3.3.0
 # Memory (Cognee)
 cognee>=1.0.0
 
-# LLM (raw Anthropic SDK — no LangChain/CrewAI per AGENT.md)
-anthropic>=0.40.0
+# LLM (OpenAI SDK for OpenRouter — no LangChain/CrewAI per AGENT.md)
+openai>=1.0.0
 
 # HTTP client
 httpx>=0.27.0
