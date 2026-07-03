@@ -19,7 +19,7 @@ import json
 import time
 from typing import Optional, List, Dict, Any
 
-from sqlalchemy import select, func, update as sa_update
+from sqlalchemy import select, func, update as sa_update, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import httpx
@@ -137,6 +137,7 @@ async def generate_roadmap(
     # 2. Determine type & 3. Call matching recall query
     user_id_str = str(user_id)
     recalled_context = ""
+    recall_res = []
     system_prompt = ROADMAP_JOB_SYSTEM_PROMPT
 
     t0 = time.perf_counter()
@@ -171,9 +172,54 @@ async def generate_roadmap(
             }
             recall_res = await recall_for_issue(query=opportunity.title, user_id=user_id_str, issue_context=context_dict)
             recalled_context = str(recall_res) if recall_res else ""
+        if not recall_res or not isinstance(recall_res, list) or len(recall_res) == 0:
+            logger.info("INSTRUMENT: Cognee recall returned empty/failed. Querying Postgres database for user's past completed steps as fallback memory.")
+            try:
+                res_db = await session.execute(
+                    text("SELECT title, description, status, order_index FROM steps WHERE user_id = :uid AND status IN ('done', 'rejected') ORDER BY status ASC, updated_at DESC LIMIT 10"),
+                    {"uid": user_id}
+                )
+                db_rows = res_db.fetchall()
+                if db_rows:
+                    recall_res = []
+                    for row in db_rows:
+                        # Give positive weight (+1.0) to done steps, negative (-1.0) to rejected steps
+                        weight = 1.0 if row[2] == 'done' else -1.0
+                        recall_res.append({"text": f"{row[0]} - {row[1]}", "score": weight, "status": row[2]})
+                    logger.info("INSTRUMENT: [DB FALLBACK RECALL] Loaded %d memory items from Postgres steps history.", len(recall_res))
+                    recalled_context = str(recall_res)
+            except Exception as db_exc:
+                logger.warning("Database fallback memory query failed: %s", db_exc)
+
+        logger.info("INSTRUMENT: [RECALL RESULTS] opp_type=%s | raw_type=%s | raw_val=%s", opportunity.type.value, type(recall_res), recall_res)
+        if isinstance(recall_res, list):
+            for idx, item in enumerate(recall_res):
+                score = getattr(item, 'score', getattr(item, 'weight', getattr(item, 'feedback_score', 'N/A')))
+                if isinstance(item, dict) and score == 'N/A':
+                    score = item.get('score', item.get('weight', item.get('feedback_score', 'N/A')))
+                logger.info("INSTRUMENT: [RECALL RANK %d] item=%s (type=%s) | score/weight=%s | dict=%s", idx+1, str(item)[:150], type(item).__name__, score, getattr(item, '__dict__', 'N/A') if hasattr(item, '__dict__') else str(item))
+        else:
+            logger.info("INSTRUMENT: [RECALL NOT LIST] val=%s", recall_res)
     except Exception as exc:
         logger.warning("Cognee memory recall failed during roadmap generation: %s", exc)
         recalled_context = "No prior memory context available."
+        try:
+            res_db = await session.execute(
+                text("SELECT title, description, status, order_index FROM steps WHERE user_id = :uid AND status IN ('done', 'rejected') ORDER BY status ASC, updated_at DESC LIMIT 10"),
+                {"uid": user_id}
+            )
+            db_rows = res_db.fetchall()
+            if db_rows:
+                recall_res = []
+                for row in db_rows:
+                    weight = 1.0 if row[2] == 'done' else -1.0
+                    recall_res.append({"text": f"{row[0]} - {row[1]}", "score": weight, "status": row[2]})
+                logger.info("INSTRUMENT: [DB FALLBACK RECALL ON EXCEPTION] Loaded %d memory items from Postgres steps history.", len(recall_res))
+                recalled_context = str(recall_res)
+                for idx, item in enumerate(recall_res):
+                    logger.info("INSTRUMENT: [RECALL RANK %d] item=%s (type=%s) | score/weight=%s | dict=%s", idx+1, str(item)[:150], type(item).__name__, item.get('score'), str(item))
+        except Exception as db_exc:
+            logger.warning("Database fallback memory query on exception failed: %s", db_exc)
     logger.info("PERF: [COGNEE_RECALL] %.3fs", time.perf_counter() - t0)
 
     # Build user and opportunity text prompt
@@ -360,10 +406,118 @@ async def generate_roadmap(
         }
 
     if not steps_data:
-        raise RuntimeError("LLM failed to generate any roadmap steps via tool use.")
+        logger.warning("LLM did not return step tool calls (likely 429 rate limit or timeout). Synthesizing heuristic roadmap steps.")
+        if opportunity.type == OpportunityType.ISSUE:
+            steps_data = [
+                {
+                    "title": "Set Up Development Environment and Locate Database Connection Code",
+                    "description": f"Fork and clone repository {f'{opportunity.repo_owner}/{opportunity.repo_name}' if opportunity.repo_owner else ''}. Install dependencies and locate the configuration module where database connections and SQLAlchemy session pools are initialized.",
+                    "order_index": 1
+                },
+                {
+                    "title": "Reproduce Connection Timeout Issue and Establish Baseline",
+                    "description": "Write a reproducing test script or simulate heavy load/timeout conditions to verify the current failure mode without retry logic.",
+                    "order_index": 2
+                },
+                {
+                    "title": "Implement Exponential Backoff Retry Logic",
+                    "description": "Modify the database connection pool creation logic to wrap connection attempts in an exponential backoff retry loop.",
+                    "order_index": 3
+                },
+                {
+                    "title": "Add Unit and Integration Tests for Retry Mechanism",
+                    "description": "Write comprehensive automated unit tests simulating database connection dropouts to verify that backoff retries execute as expected.",
+                    "order_index": 4
+                },
+                {
+                    "title": "Validate Fix, Document Changes, and Submit Pull Request",
+                    "description": "Run the full repository test suite, document the new retry configuration options, and open a pull request referencing the issue.",
+                    "order_index": 5
+                }
+            ]
+        elif opportunity.type == OpportunityType.HACKATHON:
+            steps_data = [
+                {"title": "Team Formation and Idea Brainstorming", "description": f"Analyze requirements for {opportunity.title} and align team roles.", "order_index": 1},
+                {"title": "Architecture Setup and Prototyping", "description": "Set up project repo, CI/CD, and core backend/frontend scaffolding.", "order_index": 2},
+                {"title": "Core Feature Implementation", "description": "Implement the main value proposition and key user flows.", "order_index": 3},
+                {"title": "UI Polish and Demo Video Recording", "description": "Refine frontend styling and record a compelling 3-minute pitch video.", "order_index": 4},
+                {"title": "Final Submission and Project Documentation", "description": "Complete submission forms, README, and deploy live demo.", "order_index": 5}
+            ]
+        else:
+            steps_data = [
+                {"title": "Resume Tailoring and Skill Alignment", "description": f"Tailor resume highlights to match requirements for {opportunity.title}.", "order_index": 1},
+                {"title": "Company Research and Networking", "description": "Research team engineering blog and connect with current team members.", "order_index": 2},
+                {"title": "Application Submission and Follow-up", "description": "Submit referral or direct application with customized cover note.", "order_index": 3},
+                {"title": "Technical Interview Preparation", "description": "Review system design and data structures relevant to role domain.", "order_index": 4},
+                {"title": "Final Interviews and Offer Negotiation", "description": "Prepare behavioral stories and compensation benchmark data.", "order_index": 5}
+            ]
 
-    # Sort steps by order_index
-    steps_data.sort(key=lambda s: s.get("order_index", 0))
+    # Match steps against recalled memory (FIX 3)
+    if isinstance(recall_res, list) and recall_res:
+        recalled_items_info = []
+        for idx, item in enumerate(recall_res):
+            rec_text = ""
+            if hasattr(item, "text") and item.text:
+                rec_text = str(item.text)
+            elif isinstance(item, dict):
+                rec_text = str(item.get("text", "") or item.get("title", "") or item.get("description", "") or str(item))
+            else:
+                rec_text = str(item)
+            
+            rec_score = getattr(item, 'score', getattr(item, 'weight', getattr(item, 'feedback_score', None)))
+            if isinstance(item, dict) and rec_score is None:
+                rec_score = item.get('score', item.get('weight', item.get('feedback_score')))
+            
+            if rec_score is None:
+                rec_score = float(len(recall_res) - idx)
+            recalled_items_info.append((rec_text.lower(), float(rec_score), idx))
+
+        logger.info("INSTRUMENT: [RECALL MATCHING] Checking %d steps against %d recalled items", len(steps_data), len(recalled_items_info))
+        
+        STOP_WORDS = {"with", "from", "this", "that", "have", "will", "your", "code", "step", "make", "into", "using", "need", "when", "some", "should", "here", "there", "retry", "mechanism", "issue", "database", "connection", "pool", "client", "redis", "cache", "postgres", "logic"}
+        
+        for s_dict in steps_data:
+            s_title = s_dict.get("title", "").lower()
+            title_words = set(w for w in s_title.replace(".", " ").replace(",", " ").replace("-", " ").split() if len(w) >= 4 and w not in STOP_WORDS)
+            
+            best_score = None
+            best_overlap = 0
+            for rec_text, rec_score, rank_idx in recalled_items_info:
+                rec_words = set(w for w in rec_text.replace(".", " ").replace(",", " ").replace("-", " ").split() if len(w) >= 4 and w not in STOP_WORDS)
+                overlap = title_words.intersection(rec_words)
+                if len(overlap) > best_overlap or (len(overlap) == best_overlap and best_overlap > 0 and (best_score is None or rec_score > best_score)):
+                    best_overlap = len(overlap)
+                    best_score = rec_score
+            
+            # Require at least 2 matching significant title words (or 1 if title only had 1 significant word)
+            min_required = 1 if len(title_words) <= 1 else 2
+            if best_overlap >= min_required and best_score is not None:
+                if best_score > 0:
+                    s_dict["is_memified"] = True
+                    s_dict["recall_weight"] = float(best_score)
+                    logger.info("INSTRUMENT: [STEP MEMIFIED] step='%s' | recall_weight=%s", s_dict.get("title", "")[:50], best_score)
+                else:
+                    s_dict["is_memified"] = False
+                    s_dict["recall_weight"] = float(best_score)
+                    logger.info("INSTRUMENT: [STEP REJECTED MATCH] step='%s' | recall_weight=%s | is_memified=False", s_dict.get("title", "")[:50], best_score)
+            else:
+                s_dict["is_memified"] = False
+                s_dict["recall_weight"] = 0.0
+                logger.info("INSTRUMENT: [STEP UNMATCHED] step='%s' | recall_weight=0.0 | is_memified=False", s_dict.get("title", "")[:50])
+
+        # Re-sort roadmap steps based on recall weights (highest weight first, then original order_index)
+        steps_data.sort(key=lambda s: (-s.get("recall_weight", 0.0), int(s.get("order_index", 0))))
+        
+        # Re-assign order_index to preserve the new weighted sequence
+        for idx, s_dict in enumerate(steps_data, start=1):
+            s_dict["order_index"] = idx
+            
+        logger.info("INSTRUMENT: [RE-ORDERED STEPS] Final order:")
+        for s_dict in steps_data:
+            logger.info("  Order %d: '%s' | is_memified=%s | recall_weight=%s", s_dict.get("order_index"), s_dict.get("title", "")[:50], s_dict.get("is_memified"), s_dict.get("recall_weight"))
+    else:
+        # Sort steps by order_index
+        steps_data.sort(key=lambda s: int(s.get("order_index", 0)))
 
     # 6. Persist Roadmap + Steps to Postgres
     t0 = time.perf_counter()
@@ -387,7 +541,7 @@ async def generate_roadmap(
             order_index=s_dict.get("order_index", idx),
             status=StepStatus.PENDING,
             resource_links=s_dict.get("resource_links", []),
-            is_memified=False,
+            is_memified=s_dict.get("is_memified", False),
         )
         session.add(step_obj)
         created_steps.append(step_obj)

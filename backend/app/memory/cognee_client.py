@@ -107,10 +107,10 @@ async def remember(
                 session_id=session_id,
                 self_improvement=True,
             ),
-            timeout=30.0,
+            timeout=15.0,
         )
     except asyncio.TimeoutError:
-        logger.warning("PERF: [cognee.remember] TIMEOUT 30s dataset=%s", ds_name)
+        logger.warning("PERF: [cognee.remember] TIMEOUT 15s dataset=%s", ds_name)
         return None
     logger.info("PERF: [cognee.remember] dataset=%s %.3fs", ds_name, time.perf_counter() - t0)
 
@@ -176,10 +176,10 @@ async def recall(
     try:
         results = await asyncio.wait_for(
             cognee.recall(**kwargs),
-            timeout=30.0,
+            timeout=15.0,
         )
     except asyncio.TimeoutError:
-        logger.warning("PERF: [cognee.recall] TIMEOUT 30s")
+        logger.warning("PERF: [cognee.recall] TIMEOUT 15s")
         return []
     logger.info("PERF: [cognee.recall] %.3fs", time.perf_counter() - t0)
     return results
@@ -195,7 +195,7 @@ async def improve(
     session_id: str,
     user_id: Optional[str] = None,
     dataset_name: Optional[str] = None,
-) -> None:
+) -> Any:
     """
     Record feedback on a step and enrich the knowledge graph.
 
@@ -221,15 +221,39 @@ async def improve(
 
     # Store feedback entry
     if qa_id:
+        if session_id:
+            try:
+                from cognee.infrastructure.session.get_session_manager import get_session_manager
+                sm = get_session_manager()
+                if sm and sm.is_available:
+                    entries = await sm.get_session(user_id=user_id or "", session_id=session_id, formatted=False)
+                    if not any(e.qa_id == qa_id for e in entries):
+                        step_title = step_data.get("title", f"Step {qa_id}")
+                        await sm._cache.create_qa_entry(
+                            user_id=user_id or "",
+                            session_id=session_id,
+                            qa_id=qa_id,
+                            question=step_title,
+                            context="",
+                            answer=step_title,
+                        )
+            except Exception as e:
+                logger.warning("cognee.improve: failed to pre-seed session QA entry: %s", e)
+
+        fb_dataset = f"{user_id}_feedback" if user_id else "feedback"
         feedback = FeedbackEntry(
             qa_id=qa_id,
             feedback_score=score,
             feedback_text=feedback_text,
         )
-        await cognee.remember(feedback)
+        await cognee.remember(
+            feedback,
+            session_id=session_id or fb_dataset,
+            dataset_name=fb_dataset,
+        )
         logger.info(
-            "cognee.improve: feedback stored for qa_id=%s score=%d",
-            qa_id, score,
+            "cognee.improve: feedback stored for qa_id=%s score=%d session=%s",
+            qa_id, score, session_id,
         )
 
     # Run improve to apply feedback weights
@@ -238,18 +262,20 @@ async def improve(
         ds_name = f"{user_id}_{ds_name}"
 
     t0 = time.perf_counter()
+    result = None
     try:
-        await asyncio.wait_for(
+        result = await asyncio.wait_for(
             cognee.improve(
                 dataset=ds_name,
                 session_ids=[session_id] if session_id else None,
             ),
-            timeout=30.0,
+            timeout=15.0,
         )
     except asyncio.TimeoutError:
-        logger.warning("PERF: [cognee.improve] TIMEOUT 30s dataset=%s", ds_name)
-        return
-    logger.info("PERF: [cognee.improve] dataset=%s %.3fs", ds_name, time.perf_counter() - t0)
+        logger.warning("PERF: [cognee.improve] TIMEOUT 15s dataset=%s", ds_name)
+        return None
+    logger.info("PERF: [cognee.improve] dataset=%s %.3fs result=%s", ds_name, time.perf_counter() - t0, result)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -304,10 +330,10 @@ async def forget(
     try:
         result = await asyncio.wait_for(
             cognee.forget(**kwargs),
-            timeout=30.0,
+            timeout=120.0,
         )
     except asyncio.TimeoutError:
-        logger.warning("PERF: [cognee.forget] TIMEOUT 30s dataset=%s", ds_name)
+        logger.warning("PERF: [cognee.forget] TIMEOUT 120s dataset=%s", ds_name)
         return {"status": "timeout"}
     logger.info("PERF: [cognee.forget] dataset=%s %.3fs", ds_name, time.perf_counter() - t0)
     return result

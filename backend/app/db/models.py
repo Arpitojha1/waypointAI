@@ -23,6 +23,7 @@ from sqlalchemy import (
     Enum as SAEnum,
     func,
     LargeBinary,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -174,7 +175,7 @@ class Roadmap(Base):
     version: Mapped[int] = mapped_column(Integer, default=1)
 
     # Phase 3: Track whether Cognee memory seeding is complete for this roadmap
-    cognee_seeded: Mapped[bool] = mapped_column(default=False)
+    cognee_seeded: Mapped[bool] = mapped_column(default=False, server_default=text('false'))
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

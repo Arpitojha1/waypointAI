@@ -51,7 +51,7 @@ async def recall_for_job(
         augmented_query = " | ".join(parts)
 
     # Search across relevant datasets
-    datasets = _build_dataset_list(user_id, ["user_profile", "job", "feedback"])
+    datasets = _build_dataset_list(user_id, ["user_profile", "job", "step", "feedback"])
 
     logger.info("recall_for_job: query='%s' datasets=%s", augmented_query[:80], datasets)
 
@@ -94,7 +94,7 @@ async def recall_for_hackathon(
             parts.append(f"Description: {hackathon_context['description']}")
         augmented_query = " | ".join(parts)
 
-    datasets = _build_dataset_list(user_id, ["user_profile", "hackathon", "feedback"])
+    datasets = _build_dataset_list(user_id, ["user_profile", "hackathon", "step", "feedback"])
 
     logger.info("recall_for_hackathon: query='%s' datasets=%s", augmented_query[:80], datasets)
 
@@ -139,7 +139,7 @@ async def recall_for_issue(
             parts.append(f"Description: {issue_context['description']}")
         augmented_query = " | ".join(parts)
 
-    datasets = _build_dataset_list(user_id, ["user_profile", "issue", "feedback"])
+    datasets = _build_dataset_list(user_id, ["user_profile", "issue", "step", "feedback"])
 
     logger.info("recall_for_issue: query='%s' datasets=%s", augmented_query[:80], datasets)
 
@@ -156,7 +156,7 @@ async def recall_for_issue(
 
 def _build_dataset_list(user_id: Optional[str], types: list[str]) -> list[str]:
     """Build user-scoped and shared dataset names for Cognee queries."""
-    shared_types = {"job", "hackathon", "issue"}
+    shared_types = {"job", "hackathon", "issue", "step"}
     result = []
     for t in types:
         if t in shared_types:

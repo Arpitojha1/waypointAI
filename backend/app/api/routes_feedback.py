@@ -86,26 +86,31 @@ async def submit_step_feedback(
 
         try:
             if payload.status == StepStatus.DONE:
-                await improve(
+                logger.info("INSTRUMENT: Calling cognee.improve() | outcome=positive | step_metadata={'id': '%s', 'title': '%s', 'order_index': %s, 'status': '%s'}", step.id, step.title, step.order_index, step.status.value)
+                improve_res = await improve(
                     step_data={"title": step.title, "qa_id": str(step.id)},
                     outcome="positive",
                     session_id=session_id,
                     user_id=user_id_str,
                     dataset_name="step",
                 )
+                logger.info("INSTRUMENT: cognee.improve() returned | outcome=positive | step_id=%s | return_value=%s", step.id, improve_res)
                 step.is_memified = True
                 msg += " (triggered Cognee improve positive)"
             elif payload.status == StepStatus.REJECTED:
-                await improve(
+                logger.info("INSTRUMENT: Calling cognee.improve() | outcome=negative | step_metadata={'id': '%s', 'title': '%s', 'order_index': %s, 'status': '%s'}", step.id, step.title, step.order_index, step.status.value)
+                improve_res = await improve(
                     step_data={"title": step.title, "qa_id": str(step.id)},
                     outcome="negative",
                     session_id=session_id,
                     user_id=user_id_str,
                     dataset_name="step",
                 )
+                logger.info("INSTRUMENT: cognee.improve() returned | outcome=negative | step_id=%s | return_value=%s", step.id, improve_res)
                 step.is_memified = True
                 msg += " (triggered Cognee improve negative)"
             elif payload.status == StepStatus.SKIPPED:
+                logger.info("INSTRUMENT: Calling cognee.forget() | step_id=%s", step.id)
                 await forget(
                     data_id=str(step.id),
                     dataset_name="step",
@@ -168,7 +173,8 @@ async def submit_step_edit(
                 f"Original: {original_description[:300]}\n"
                 f"Edited: {payload.description[:300]}"
             )
-            await improve(
+            logger.info("INSTRUMENT: Calling cognee.improve() for edit | outcome=positive | step_metadata={'id': '%s', 'title': '%s'}", step.id, step.title)
+            improve_res = await improve(
                 step_data={
                     "title": step.title,
                     "qa_id": str(step.id),
@@ -179,6 +185,7 @@ async def submit_step_edit(
                 user_id=user_id_str,
                 dataset_name="step",
             )
+            logger.info("INSTRUMENT: cognee.improve() for edit returned | step_id=%s | return_value=%s", step.id, improve_res)
             step.is_memified = True
             msg += " (triggered Cognee improve with edit diff)"
         except Exception as exc:
