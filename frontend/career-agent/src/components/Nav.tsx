@@ -1,75 +1,72 @@
 import React from 'react';
-import { Cpu, User } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Cpu } from 'lucide-react';
+import { StaggeredMenu } from './StaggeredMenu';
 
 interface NavProps {
-  activeTab: 'opportunities' | 'profile';
-  onSelectTab: (tab: 'opportunities' | 'profile') => void;
+  activeTab?: 'opportunities' | 'profile';
+  onSelectTab?: (tab: 'opportunities' | 'profile') => void;
   onOpenBYOK: () => void;
   byokActive: boolean;
-  profileSeeded: boolean;
+  byokModel?: string;
+  profileSeeded?: boolean;
 }
 
 export const Nav: React.FC<NavProps> = ({
-  activeTab,
-  onSelectTab,
   onOpenBYOK,
   byokActive,
-  profileSeeded,
+  byokModel,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const formatModelDisplay = (model?: string) => {
+    if (!model || !model.trim()) return 'nemotron-3-super (free)';
+    let name = model.trim();
+    if (name.includes('/')) {
+      name = name.split('/').pop() || name;
+    }
+    if (name.endsWith(':free')) {
+      name = `${name.replace(':free', '')} (free)`;
+    }
+    return name;
+  };
+
+  const handleBrandClick = () => {
+    if (location.pathname === '/') {
+      navigate('/dashboard');
+    } else {
+      navigate('/');
+    }
+  };
+
   return (
     <header className="nav-bar">
       <div
         className="nav-brand"
-        onClick={() => onSelectTab('opportunities')}
+        onClick={handleBrandClick}
         role="button"
         tabIndex={0}
+        style={{ cursor: 'pointer' }}
       >
         <div className="nav-brand-logo">W</div>
         <span>Waypoint</span>
       </div>
 
-      <nav className="nav-pills">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-16)' }}>
         <button
           type="button"
-          className={`nav-pill ${activeTab === 'opportunities' ? 'active' : ''}`}
-          onClick={() => onSelectTab('opportunities')}
+          className="byok-status"
+          onClick={onOpenBYOK}
+          title="Open OpenRouter / LLM Configuration"
         >
-          Opportunities
+          <span className={`status-dot ${byokActive ? 'active' : 'default'}`} />
+          <Cpu size={14} style={{ opacity: 0.8 }} />
+          <span>LLM: {formatModelDisplay(byokModel)}</span>
         </button>
-        <button
-          type="button"
-          className={`nav-pill ${activeTab === 'profile' ? 'active' : ''}`}
-          onClick={() => onSelectTab('profile')}
-        >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <User size={15} />
-            My Profile
-            {!profileSeeded && (
-              <span
-                style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: 'var(--color-hackathon-orange)',
-                  display: 'inline-block',
-                }}
-                title="Profile unseeded"
-              />
-            )}
-          </span>
-        </button>
-      </nav>
 
-      <button
-        type="button"
-        className="byok-status"
-        onClick={onOpenBYOK}
-        title="Open OpenRouter / LLM Configuration"
-      >
-        <span className={`status-dot ${byokActive ? 'active' : 'default'}`} />
-        <Cpu size={14} style={{ opacity: 0.8 }} />
-        <span>LLM: nemotron-3-super (free)</span>
-      </button>
+        <StaggeredMenu />
+      </div>
     </header>
   );
 };

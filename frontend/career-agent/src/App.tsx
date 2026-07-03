@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import type { Opportunity, OpportunityType, Roadmap, UserProfile } from './types';
 import type { BYOKSettings } from './api';
 import { Nav } from './components/Nav';
+import { Footer } from './components/Footer';
 import { BYOKModal } from './components/BYOKModal';
-import { ProfileModal } from './components/ProfileModal';
 import { Toast } from './components/Toast';
 import { OpportunityList } from './pages/OpportunityList';
 import { RoadmapView } from './pages/RoadmapView';
-import { fetchOpportunities, createRoadmap, fetchRoadmapByOpportunity, fetchMyProfile, seedProfile, getAuthToken, fetchBYOKSettings, saveBYOKSettings } from './api';
+import { LandingPage } from './pages/LandingPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { AboutPage } from './pages/AboutPage';
+import { fetchOpportunities, createRoadmap, fetchRoadmapByOpportunity, fetchMyProfile, getAuthToken, fetchBYOKSettings, saveBYOKSettings } from './api';
 import './index.css';
 
-export function App() {
-  const [activeTab, setActiveTab] = useState<'opportunities' | 'profile'>('opportunities');
+function AppContent() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -25,11 +28,13 @@ export function App() {
   const [byokOpen, setByokOpen] = useState<boolean>(false);
   const [byokSettings, setByokSettings] = useState<BYOKSettings>({});
   
-  const [profileOpen, setProfileOpen] = useState<boolean>(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   const [toastMsg, setToastMsg] = useState<string>('');
   const [toastIsMemify, setToastIsMemify] = useState<boolean>(false);
+
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const triggerToast = useCallback((msg: string, isMemify = false) => {
     setToastMsg(msg);
@@ -92,21 +97,11 @@ export function App() {
 
   useEffect(() => {
     loadProfile();
-  }, [loadProfile]);
+  }, [loadProfile, location.pathname]); // Re-check profile when route changes (e.g. returning from ProfilePage)
 
   useEffect(() => {
     loadBYOK();
   }, [loadBYOK]);
-
-  const handleSelectTab = (tab: 'opportunities' | 'profile') => {
-    if (tab === 'profile') {
-      setProfileOpen(true);
-    } else {
-      setActiveTab('opportunities');
-      setSelectedRoadmap(null);
-      setSelectedOpportunity(null);
-    }
-  };
 
   const handleSelectOpportunity = async (opp: Opportunity) => {
     setGeneratingId(opp.id);
@@ -141,51 +136,63 @@ export function App() {
     triggerToast('BYOK configuration saved to Postgres.', false);
   };
 
-  const handleSaveProfile = async (data: {
-    display_name: string;
-    skills: string[];
-    experience_summary: string;
-  }) => {
-    const p = await seedProfile(data);
-    setProfile(p);
-    triggerToast('Career profile and Cognee memory seeded successfully!', true);
-  };
+  const isLandingPage = location.pathname === '/';
 
   return (
-    <div className="container">
-      <Nav
-        activeTab={selectedRoadmap ? 'opportunities' : activeTab}
-        onSelectTab={handleSelectTab}
-        onOpenBYOK={() => setByokOpen(true)}
-        byokActive={Boolean(byokSettings.byok_key || byokSettings.byok_model || byokSettings.byok_endpoint)}
-        profileSeeded={Boolean(profile)}
-      />
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {isLandingPage ? (
+        <LandingPage onGetStarted={() => navigate('/dashboard')} />
+      ) : (
+        <div className="container" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+          <Nav
+            onOpenBYOK={() => setByokOpen(true)}
+            byokActive={Boolean(byokSettings.byok_key || byokSettings.byok_model || byokSettings.byok_endpoint)}
+            byokModel={byokSettings.byok_model}
+            profileSeeded={Boolean(profile)}
+          />
 
-      <main>
-        {selectedRoadmap ? (
-          <RoadmapView
-            roadmap={selectedRoadmap}
-            opportunity={selectedOpportunity}
-            onBack={() => {
-              setSelectedRoadmap(null);
-              setSelectedOpportunity(null);
-            }}
-            onUpdateRoadmap={(updated) => setSelectedRoadmap(updated)}
-            onToast={triggerToast}
-          />
-        ) : (
-          <OpportunityList
-            opportunities={opportunities}
-            loading={loading}
-            error={error}
-            activeFilter={typeFilter}
-            onFilterChange={(f) => setTypeFilter(f)}
-            onSelectOpportunity={handleSelectOpportunity}
-            generatingId={generatingId}
-            onRefresh={loadOpportunities}
-          />
-        )}
-      </main>
+          <main style={{ flexGrow: 1 }}>
+            <Routes>
+              <Route
+                path="/dashboard"
+                element={
+                  selectedRoadmap ? (
+                    <RoadmapView
+                      roadmap={selectedRoadmap}
+                      opportunity={selectedOpportunity}
+                      onBack={() => {
+                        setSelectedRoadmap(null);
+                        setSelectedOpportunity(null);
+                      }}
+                      onUpdateRoadmap={(updated) => setSelectedRoadmap(updated)}
+                      onToast={triggerToast}
+                    />
+                  ) : (
+                    <OpportunityList
+                      opportunities={opportunities}
+                      loading={loading}
+                      error={error}
+                      activeFilter={typeFilter}
+                      onFilterChange={(f) => setTypeFilter(f)}
+                      onSelectOpportunity={handleSelectOpportunity}
+                      generatingId={generatingId}
+                      onRefresh={loadOpportunities}
+                    />
+                  )
+                }
+              />
+              <Route
+                path="/profile"
+                element={<ProfilePage onBack={() => navigate('/dashboard')} />}
+              />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </main>
+
+          <Footer />
+        </div>
+      )}
 
       <BYOKModal
         isOpen={byokOpen}
@@ -194,19 +201,20 @@ export function App() {
         onSaveSettings={handleSaveBYOKSettings}
       />
 
-      <ProfileModal
-        isOpen={profileOpen}
-        onClose={() => setProfileOpen(false)}
-        profile={profile}
-        onSaveProfile={handleSaveProfile}
-      />
-
       <Toast
         message={toastMsg}
         isMemify={toastIsMemify}
         onClose={() => setToastMsg('')}
       />
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }
 

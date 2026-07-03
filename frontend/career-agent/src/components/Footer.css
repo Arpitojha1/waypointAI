@@ -1,0 +1,86 @@
+/* Footer.css — Theme-aware application footer */
+
+.app-footer {
+  margin-top: auto;
+  padding: var(--spacing-48) 0 var(--spacing-32);
+  border-top: 1px solid var(--color-olive-stone);
+  background-color: var(--color-void-black);
+  color: var(--color-ash-gray);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--spacing-32);
+  margin-bottom: var(--spacing-40);
+}
+
+.footer-brand-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+  max-width: 340px;
+}
+
+.footer-brand-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--color-cream-glow);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.footer-brand-desc {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-ash-gray);
+}
+
+.footer-links-section {
+  display: flex;
+  gap: var(--spacing-48);
+  flex-wrap: wrap;
+}
+
+.footer-links-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-col-title {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--color-cream-glow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.footer-link {
+  color: var(--color-ash-gray);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: var(--color-job-blue);
+}
+
+.footer-bottom {
+  padding-top: var(--spacing-24);
+  border-top: 1px solid rgba(66, 67, 61, 0.4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-16);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}

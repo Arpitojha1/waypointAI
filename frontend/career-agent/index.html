@@ -4,7 +4,15 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>career-agent</title>
+    <meta name="description" content="Waypoint AI — Your AI career copilot. Personalized roadmaps for jobs, hackathons, and open-source contributions." />
+    <title>Waypoint AI</title>
+    <script>
+      // FOUC prevention: apply theme before paint
+      (function() {
+        var t = localStorage.getItem('waypoint-theme');
+        document.documentElement.dataset.theme = (t === 'light') ? 'light' : 'dark';
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

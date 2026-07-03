@@ -43,6 +43,26 @@
   --surface-canvas: #0e100f;
 }
 
+/* ─── Light Theme Overrides ─── */
+[data-theme="light"] {
+  --color-void-black: #f5f4f0;
+  --color-cream-glow: #1a1c1b;
+  --color-olive-stone: #d4d3cf;
+  --color-ash-gray: #6b6b60;
+  --color-issue-green: #059b2e;
+  --gradient-issue-green: linear-gradient(114.41deg, #059b2e 20.74%, #4db862 65.5%);
+  --color-job-blue: #0091b3;
+  --color-hackathon-orange: #d46e00;
+  --color-reject-red: #d93636;
+  --color-memify-violet: #6c63e0;
+  --surface-canvas: #f5f4f0;
+  color-scheme: light;
+}
+
+:root {
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -59,6 +79,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.2s ease;
 }
 
 #root {
