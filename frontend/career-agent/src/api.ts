@@ -1,9 +1,27 @@
 import type { Opportunity, OpportunityType, Roadmap, Step, StepStatus, UserProfile } from './types';
+import { supabase } from './supabase';
 
 let authToken: string | null = localStorage.getItem('waypoint_token');
 
+export function clearAuthToken(): void {
+  authToken = null;
+  localStorage.removeItem('waypoint_token');
+}
+
 export async function getAuthToken(): Promise<string> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token) {
+      authToken = data.session.access_token;
+      localStorage.setItem('waypoint_token', authToken);
+      return authToken;
+    }
+  } catch (err) {
+    console.warn('Could not check active Supabase session:', err);
+  }
+
   if (authToken) return authToken;
+
   try {
     const res = await fetch('/api/profile/token');
     if (res.ok) {
@@ -133,6 +151,7 @@ export async function seedProfile(payload: {
   display_name: string;
   skills: string[];
   experience_summary: string;
+  preferences?: Record<string, any>;
 }): Promise<UserProfile> {
   const res = await fetch('/api/profile/seed', {
     method: 'POST',

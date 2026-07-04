@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, Sun, Moon, ArrowRight, Sparkles } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import './StaggeredMenu.css';
 
 interface StaggeredMenuProps {
@@ -12,6 +13,7 @@ interface StaggeredMenuProps {
 export const StaggeredMenu: React.FC<StaggeredMenuProps> = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { isAuthenticated, signOut, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -32,15 +34,74 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = () => {
     };
   }, [isOpen]);
 
-  const menuItems = [
-    { label: 'Home', path: '/' },
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'My Profile', path: '/profile' },
-    { label: 'About', path: '/about' },
-  ];
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Focus first focusable element inside panel when opened
+    const focusableElements = panelRef.current?.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusableElements && focusableElements.length > 0) {
+      focusableElements[0].focus();
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+        return;
+      }
+      if (e.key === 'Tab' && panelRef.current) {
+        const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const firstElement = focusables[0];
+        const lastElement = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            lastElement.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            firstElement.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  const menuItems = isAuthenticated
+    ? [
+        { label: 'Home', path: '/' },
+        { label: 'Dashboard', path: '/dashboard' },
+        { label: 'Profile', path: '/profile' },
+        { label: 'About', path: '/about' },
+        { label: 'Sign Out', path: '#signout' },
+      ]
+    : [
+        { label: 'Home', path: '/' },
+        { label: 'Log In', path: '/login' },
+        { label: 'Sign Up', path: '/signup' },
+        { label: 'Dashboard', path: '/dashboard' },
+        { label: 'About', path: '/about' },
+      ];
 
   const handleNavigate = (path: string) => {
     setIsOpen(false);
+    if (path === '#signout' || path === '#logout') {
+      if (signOut) signOut();
+      else logout();
+      navigate('/');
+      return;
+    }
     navigate(path);
   };
 
@@ -75,7 +136,7 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = () => {
       />
 
       {/* Slide-In Panel */}
-      <div className={`staggered-menu-panel ${isOpen ? 'open' : ''}`} role="dialog" aria-modal="true">
+      <div className={`staggered-menu-panel ${isOpen ? 'open' : ''}`} ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true">
         <div>
           <div className="menu-panel-header">
             <div className="menu-panel-brand">

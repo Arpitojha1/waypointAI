@@ -3,7 +3,7 @@
 .app-footer {
   margin-top: auto;
   padding: var(--spacing-48) 0 var(--spacing-32);
-  border-top: 1px solid var(--color-olive-stone);
+  border-top: 1px solid var(--border-hairline);
   background-color: var(--color-void-black);
   color: var(--color-ash-gray);
   transition: background-color 0.3s ease, border-color 0.3s ease;
@@ -75,7 +75,7 @@
 
 .footer-bottom {
   padding-top: var(--spacing-24);
-  border-top: 1px solid rgba(66, 67, 61, 0.4);
+  border-top: 1px solid var(--border-hairline);
   display: flex;
   justify-content: space-between;
   align-items: center;

@@ -44,8 +44,16 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
     <div
       className={`opportunity-card type-${type}`}
       onClick={() => !isGenerating && onSelect(opportunity)}
+      onKeyDown={(e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && !isGenerating) {
+          e.preventDefault();
+          onSelect(opportunity);
+        }
+      }}
       role="button"
       tabIndex={0}
+      aria-label={`Select opportunity: ${title}`}
+      aria-disabled={isGenerating}
     >
       <div>
         <div className="card-header">
@@ -78,16 +86,10 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
         <button
           type="button"
           disabled={isGenerating}
+          className={`btn btn-accent-${type}`}
           style={{
-            background: 'transparent',
-            border: 'none',
-            color: type === 'job' ? 'var(--color-job-blue)' : type === 'hackathon' ? 'var(--color-hackathon-orange)' : '#abff84',
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 600,
-            fontSize: '14px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
+            padding: '6px 14px',
+            fontSize: '13px',
             cursor: isGenerating ? 'wait' : 'pointer',
           }}
         >

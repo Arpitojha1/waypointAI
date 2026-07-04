@@ -65,13 +65,11 @@
   height: 8px;
   border-radius: 50%;
   background: var(--color-issue-green);
-  box-shadow: 0 0 10px var(--color-issue-green);
   flex-shrink: 0;
 }
 
 .status-dot.violet {
   background: var(--color-memify-violet);
-  box-shadow: 0 0 10px var(--color-memify-violet);
 }
 
 .profile-page-header {
@@ -192,18 +190,8 @@
     color-mix(in srgb, var(--color-memify-violet) 4%, var(--surface-canvas)) 100%
   );
   border: 1px solid color-mix(in srgb, var(--color-cream-glow) 15%, transparent);
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45), 0 0 40px rgba(157, 149, 255, 0.08);
+  box-shadow: none;
   padding: 40px;
-}
-
-[data-theme="light"] .card-face {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--color-cream-glow) 95%, white) 0%,
-    color-mix(in srgb, var(--color-memify-violet) 6%, white) 100%
-  );
-  border-color: var(--color-olive-stone);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08), 0 0 30px rgba(108, 99, 224, 0.08);
 }
 
 .card-front {
@@ -279,10 +267,10 @@
   font-size: 36px;
   font-weight: 700;
   font-family: var(--font-mono);
-  box-shadow: 0 12px 30px rgba(157, 149, 255, 0.35);
+  box-shadow: none;
   position: relative;
   z-index: 2;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: none;
 }
 
 .avatar-ring {
@@ -401,7 +389,7 @@
 .profile-card-container:not(.flipped):hover .card-flip-bar {
   background: color-mix(in srgb, var(--color-memify-violet) 18%, transparent);
   border-color: var(--color-memify-violet);
-  box-shadow: 0 0 20px rgba(157, 149, 255, 0.25);
+  box-shadow: none;
   transform: translateY(-1px);
 }
 

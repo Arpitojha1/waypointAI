@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { UserProfile } from '../types';
-import { User, X, Sparkles, Check, Brain } from 'lucide-react';
+import { User, X, Sparkles, Check, Info } from 'lucide-react';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -63,31 +63,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <User size={24} style={{ color: 'var(--color-job-blue)' }} />
             <h3 className="modal-title">My Career Profile & Memory</h3>
+            <span title="Seeding your profile injects skills and background into Cognee memory for roadmap generation." style={{ cursor: 'help', color: 'var(--color-ash-gray)', display: 'inline-flex' }}>
+              <Info size={16} />
+            </span>
           </div>
           <button type="button" className="modal-close" onClick={onClose}>
             <X size={20} />
           </button>
-        </div>
-
-        <div style={{
-          padding: '16px',
-          borderRadius: '8px',
-          background: 'rgba(157, 149, 255, 0.08)',
-          border: '1px solid rgba(157, 149, 255, 0.3)',
-          marginBottom: '24px',
-          fontSize: '14px',
-          color: 'var(--color-cream-glow)',
-          display: 'flex',
-          gap: '12px',
-          alignItems: 'flex-start',
-        }}>
-          <Brain size={20} style={{ color: 'var(--color-memify-violet)', flexShrink: 0, marginTop: '2px' }} />
-          <div>
-            <div style={{ fontWeight: 600, marginBottom: '4px', color: 'var(--color-memify-violet)' }}>Cognee Knowledge Graph</div>
-            <div style={{ fontSize: '13px', opacity: 0.85, lineHeight: 1.4 }}>
-              Seeding your profile injects your skills and background into Cognee memory. When generating roadmaps, the orchestrator recalls this context to tailor milestones to your exact skill gap.
-            </div>
-          </div>
         </div>
 
         {error && (

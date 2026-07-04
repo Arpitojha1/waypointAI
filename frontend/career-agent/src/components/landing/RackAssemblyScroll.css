@@ -1,0 +1,177 @@
+/* 
+ * RackAssemblyScroll.css 
+ * Phase 5: 3D Hero Server Rack Assembly Section
+ * Exact 2-column layout, sequential z-index, Design.md tokens for 2D cards.
+ */
+
+.rack-assembly-section {
+  position: relative;
+  z-index: 4;
+  /* Stacking order: hero=5, rack-assembly=4, end-state=3 */
+  height: 100vh;
+  /* 300vh section gives a clean 200vh scroll distance */
+  background: var(--color-void-black, #0e100f);
+  width: 100%;
+}
+
+.rack-assembly-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+/* Left column: 40% width, vertical-centered flex column, holds 3 feature cards + CTA as plain 2D DOM */
+.rack-assembly-left {
+  width: 40%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 4vw;
+  z-index: 2;
+  box-sizing: border-box;
+  color: var(--color-cream-glow, #fffce1);
+}
+
+/* Right column: 60% width, holds the Canvas, full height of 100vh sticky wrapper */
+.rack-assembly-right {
+  width: 60%;
+  height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+.rack-assembly-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ─── Checkpoint 5: Explicitly 2D Feature Cards (Design.md tokens only) ─── */
+.rack-assembly-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-24, 24px);
+  width: 100%;
+  max-width: 480px;
+}
+
+.rack-card {
+  background: var(--color-void-black, #0e100f);
+  border: 1px solid var(--color-olive-stone, #42433d);
+  border-radius: var(--radius-card, 8px);
+  padding: 24px 28px;
+  font-family: var(--font-ui, 'Inter Tight', sans-serif);
+  color: var(--color-cream-glow, #fffce1);
+  box-shadow: none !important;
+  transform: none !important;
+  perspective: none !important;
+  transition: border-color 0.3s ease, opacity 0.3s ease;
+  position: relative;
+  text-align: left;
+}
+
+.rack-card-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill, 100px);
+  font-family: var(--font-mono, 'Geist Mono', monospace);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+  border: 1px solid currentColor;
+}
+
+.rack-card-title {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 8px 0;
+  color: var(--color-cream-glow, #fffce1);
+}
+
+.rack-card-desc {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-ash-gray, #7c7c6f);
+  margin: 0;
+}
+
+/* One neon accent per opportunity type per Design.md */
+.rack-card-profile {
+  border-left: 4px solid var(--color-job-blue, #00bae2);
+}
+
+.rack-card-profile .rack-card-badge {
+  color: var(--color-job-blue, #00bae2);
+}
+
+.rack-card-opportunity {
+  border-left: 4px solid var(--color-issue-green, #0ae448);
+}
+
+.rack-card-opportunity .rack-card-badge {
+  color: var(--color-issue-green, #0ae448);
+}
+
+.rack-card-roadmap {
+  border-left: 4px solid var(--color-hackathon-orange, #ff8709);
+}
+
+.rack-card-roadmap .rack-card-badge {
+  color: var(--color-hackathon-orange, #ff8709);
+}
+
+.rack-cta-container {
+  margin-top: 28px;
+}
+
+.btn-rack-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--color-cream-glow, #fffce1);
+  color: var(--color-void-black, #0e100f);
+  padding: 14px 32px;
+  border-radius: var(--radius-pill, 100px);
+  font-family: var(--font-ui, 'Inter Tight', sans-serif);
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: none;
+}
+
+.btn-rack-cta:hover {
+  transform: translateY(-2px);
+  background: #ffffff;
+}
+
+/* ─── Responsive Rules (< 768px) ─── */
+@media (max-width: 767px) {
+  .rack-assembly-sticky {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .rack-assembly-left {
+    width: 100%;
+    height: 50vh;
+    padding: 24px;
+    order: 2;
+  }
+
+  .rack-assembly-right {
+    width: 100%;
+    height: 50vh;
+    order: 1;
+  }
+}

@@ -11,10 +11,13 @@ import { RoadmapView } from './pages/RoadmapView';
 import { LandingPage } from './pages/LandingPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AboutPage } from './pages/AboutPage';
+import { SignupPage } from './pages/SignupPage';
 import { fetchOpportunities, createRoadmap, fetchRoadmapByOpportunity, fetchMyProfile, getAuthToken, fetchBYOKSettings, saveBYOKSettings } from './api';
+import { useAuth } from './context/AuthContext';
 import './index.css';
 
 function AppContent() {
+  const { setAuth } = useAuth();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -77,10 +80,13 @@ function AppContent() {
     try {
       const p = await fetchMyProfile();
       setProfile(p);
+      if (p) {
+        setAuth(p);
+      }
     } catch (err) {
       console.warn('Could not load profile:', err);
     }
-  }, []);
+  }, [setAuth]);
 
   const loadBYOK = useCallback(async () => {
     try {
@@ -141,7 +147,7 @@ function AppContent() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {isLandingPage ? (
-        <LandingPage onGetStarted={() => navigate('/dashboard')} />
+        <LandingPage onGetStarted={() => navigate(profile ? '/dashboard' : '/signup')} />
       ) : (
         <div className="container" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
           <Nav
@@ -184,6 +190,14 @@ function AppContent() {
               <Route
                 path="/profile"
                 element={<ProfilePage onBack={() => navigate('/dashboard')} />}
+              />
+              <Route
+                path="/signup"
+                element={<SignupPage onComplete={loadProfile} onToast={triggerToast} />}
+              />
+              <Route
+                path="/login"
+                element={<Navigate to="/signup" replace />}
               />
               <Route path="/about" element={<AboutPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

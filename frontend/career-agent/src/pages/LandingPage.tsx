@@ -1,16 +1,13 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
-  User,
-  Radar,
-  Layers,
-  Sparkles,
   ArrowRight,
   GitCommit,
 } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import RackAssemblyScroll from '../components/landing/RackAssemblyScroll';
 import './LandingPage.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -19,62 +16,10 @@ export interface LandingPageProps {
   onGetStarted?: () => void;
 }
 
-interface StopData {
-  side: 'left' | 'right';
-  color: string;
-  Icon: React.FC<{ size?: number; className?: string; style?: React.CSSProperties }>;
-  headline: string;
-  description: string;
-  badgeText: string;
-  isMemify?: boolean;
-}
-
-const STOPS_DATA: StopData[] = [
-  {
-    side: 'left',
-    color: 'var(--color-cream-glow)',
-    Icon: User,
-    headline: 'Tell us your skills',
-    description: 'Describe your background, skills, and goals — Waypoint uses this to find what actually fits you.',
-    badgeText: '01 / profile',
-  },
-  {
-    side: 'right',
-    color: 'var(--color-job-blue)',
-    Icon: Radar,
-    headline: 'We surface real opportunities',
-    description: 'Jobs, hackathons, and open-source issues — matched to your skills, not keyword spam.',
-    badgeText: '02 / matching',
-  },
-  {
-    side: 'left',
-    color: 'var(--color-cream-glow)',
-    Icon: Layers,
-    headline: 'We build your roadmap',
-    description: 'A step-by-step path to get you there — ordered by what matters most for your goal.',
-    badgeText: '03 / roadmap',
-  },
-  {
-    side: 'right',
-    color: 'var(--color-memify-violet)',
-    Icon: Sparkles,
-    headline: 'It adapts as you go',
-    description: 'Give feedback and Waypoint reorders your roadmap in real time — this step should visually reuse the existing Memify pulse/glow treatment already defined in design.md.',
-    badgeText: '04 / cognee memory active',
-    isMemify: true,
-  },
-];
-
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   const navigate = useNavigate();
-  const [activeStopIndex, setActiveStopIndex] = useState<number>(0);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const timelineRef = useRef<HTMLDivElement | null>(null);
-  const pathRef = useRef<SVGPathElement | null>(null);
-  const stopsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const nodesRef = useRef<(HTMLDivElement | null)[]>([]);
-  const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   const handleGetStarted = useCallback(() => {
     if (onGetStarted) {
@@ -235,91 +180,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
     };
   }, []);
 
-  // Section 3: Branch Narrative GSAP ScrollTrigger Animations
-  useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const path = pathRef.current;
-    const timeline = timelineRef.current;
-    if (!path || !timeline) return;
-
-    if (prefersReducedMotion) {
-      path.style.strokeDasharray = 'none';
-      path.style.strokeDashoffset = '0';
-      return;
-    }
-
-    const ctx = gsap.context(() => {
-      const length = path.getTotalLength();
-      path.style.strokeDasharray = `${length}`;
-      path.style.strokeDashoffset = `${length}`;
-
-      gsap.to(path, {
-        strokeDashoffset: 0,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: timeline,
-          start: 'top 65%',
-          end: 'bottom 45%',
-          scrub: true,
-        },
-      });
-
-      STOPS_DATA.forEach((_, index) => {
-        const stopEl = stopsRef.current[index];
-        const nodeEl = nodesRef.current[index];
-        const cardEl = cardsRef.current[index];
-
-        if (!stopEl || !nodeEl || !cardEl) return;
-
-        gsap.fromTo(
-          nodeEl,
-          { scale: 0, opacity: 0 },
-          {
-            scale: 1,
-            opacity: 1,
-            duration: 0.6,
-            ease: 'back.out(1.7)',
-            scrollTrigger: {
-              trigger: stopEl,
-              start: 'top 75%',
-              toggleActions: 'play none none none',
-              onEnter: () => setActiveStopIndex(index),
-              onEnterBack: () => setActiveStopIndex(index),
-            },
-          }
-        );
-
-        const headline = cardEl.querySelector('.card-headline');
-        const desc = cardEl.querySelector('.card-description');
-        const badge = cardEl.querySelector('.card-stop-label');
-        const icon = cardEl.querySelector('.card-icon-badge');
-
-        const staggerTargets = [badge, icon, headline, desc].filter(Boolean);
-
-        gsap.fromTo(
-          staggerTargets,
-          { opacity: 0, y: 30 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.6,
-            stagger: 0.1,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: stopEl,
-              start: 'top 75%',
-              toggleActions: 'play none none none',
-            },
-          }
-        );
-      });
-    }, timeline);
-
-    return () => {
-      ctx.revert();
-    };
-  }, []);
-
   return (
     <div className="landing-page">
       {/* Section 1: Hero */}
@@ -354,86 +214,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <ArrowRight size={20} className="btn-hero-cta-icon" />
           </button>
         </div>
-
-        {/* Trunk Starting Node bleeding into Section 2 */}
-        <div className="trunk-start-node" />
       </section>
 
-      {/* Section 2: Transition */}
-      <section className="landing-transition">
-        <svg className="transition-seam-svg" viewBox="0 0 1440 70" preserveAspectRatio="none">
-          <polygon points="0,70 1440,0 1440,70" className="transition-seam-polygon" />
-        </svg>
-      </section>
-
-      {/* Section 3: Branch Narrative */}
-      <section className="landing-narrative">
-        <div className="narrative-header">
-          <span className="narrative-eyebrow">How Waypoint Works</span>
-          <h2 className="narrative-title">An intelligent branch down your career trajectory</h2>
-          <p className="narrative-subtitle">
-            From initial skill profiling to dynamic roadmap reordering, your personalized career copilot evolves at every commit.
-          </p>
-        </div>
-
-        <div className="narrative-timeline-container" ref={timelineRef}>
-          <div className="timeline-trunk-wrapper">
-            <svg className="timeline-trunk-svg" viewBox="0 0 4 1000" preserveAspectRatio="none">
-              <path ref={pathRef} d="M 2 0 L 2 1000" className="trunk-path" />
-            </svg>
-          </div>
-
-          <div className="timeline-stops">
-            {STOPS_DATA.map((stop, index) => {
-              const isActive = activeStopIndex === index;
-              const isPast = activeStopIndex > index;
-
-              return (
-                <div
-                  key={index}
-                  ref={(el) => {
-                    stopsRef.current[index] = el;
-                  }}
-                  className={`timeline-stop stop-${stop.side}`}
-                >
-                  <div className="stop-node-wrapper">
-                    <div
-                      ref={(el) => {
-                        nodesRef.current[index] = el;
-                      }}
-                      className={`commit-node ${activeStopIndex >= index ? 'node-active' : ''} ${stop.isMemify ? 'memify-node' : ''}`}
-                      style={{ borderColor: stop.color, color: stop.color }}
-                    >
-                      <div className="node-inner-dot" />
-                    </div>
-                  </div>
-
-                  <div className="stop-card-container">
-                    <div
-                      ref={(el) => {
-                        cardsRef.current[index] = el;
-                      }}
-                      className={`feature-card ${isActive ? 'is-active' : ''} ${isPast ? 'is-past' : ''} ${stop.isMemify ? 'memify-card-pulse' : ''}`}
-                      style={{ color: stop.color }}
-                    >
-                      <div className="card-icon-badge" style={{ borderColor: stop.color, color: stop.color }}>
-                        <stop.Icon size={26} />
-                      </div>
-
-                      <span className="card-stop-label" style={{ color: stop.color }}>
-                        {stop.badgeText}
-                      </span>
-
-                      <h3 className="card-headline">{stop.headline}</h3>
-                      <p className="card-description">{stop.description}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      {/* Section 2: Rack Assembly Scroll */}
+      <RackAssemblyScroll />
 
       {/* Section 4: CTA / End State */}
       <section className="landing-end-state">

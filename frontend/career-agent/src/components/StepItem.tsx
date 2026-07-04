@@ -144,24 +144,14 @@ export const StepItem: React.FC<StepItemProps> = ({
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button
                 type="button"
-                className="step-action-btn done"
-                onClick={() => handleSaveEdit('accept')}
-                disabled={isSaving}
-                title="Save edit as-is (no memory write)"
-              >
-                <Check size={14} />
-                <span>Accept</span>
-              </button>
-              <button
-                type="button"
                 className="step-action-btn"
                 onClick={() => handleSaveEdit('improve')}
                 disabled={isSaving}
-                title="Save edit and feed diff to Cognee improve/memify"
+                title="Save edit and adapt via Cognee memory"
                 style={{ borderColor: 'var(--color-memify-violet)', color: 'var(--color-memify-violet)' }}
               >
                 <Brain size={14} />
-                <span>Improve</span>
+                <span>Save & Adapt</span>
               </button>
               <button
                 type="button"
@@ -204,29 +194,18 @@ export const StepItem: React.FC<StepItemProps> = ({
             disabled={isUpdating}
           >
             <Check size={14} />
-            <span>{status === 'done' ? 'Completed' : 'Done'}</span>
+            <span>{status === 'done' ? 'Completed' : 'Mark Done'}</span>
           </button>
 
           <button
             type="button"
-            className={`step-action-btn reject ${status === 'rejected' ? 'active' : ''}`}
-            onClick={() => onFeedback(id, status === 'rejected' ? 'pending' : 'rejected')}
+            className={`step-action-btn skip ${(status === 'skipped' || status === 'rejected') ? 'active' : ''}`}
+            onClick={() => onFeedback(id, (status === 'skipped' || status === 'rejected') ? 'pending' : 'skipped')}
             disabled={isUpdating}
-            title="Reject step & trigger Cognee improve (negative feedback)"
-          >
-            <X size={14} />
-            <span>{status === 'rejected' ? 'Rejected' : 'Reject & Improve'}</span>
-          </button>
-
-          <button
-            type="button"
-            className={`step-action-btn skip ${status === 'skipped' ? 'active' : ''}`}
-            onClick={() => onFeedback(id, status === 'skipped' ? 'pending' : 'skipped')}
-            disabled={isUpdating}
-            title="Skip step & trigger Cognee forget"
+            title="Mark step as not relevant & trigger Cognee memory forget/improve"
           >
             <SkipForward size={14} />
-            <span>{status === 'skipped' ? 'Skipped' : 'Skip / Forget'}</span>
+            <span>{(status === 'skipped' || status === 'rejected') ? 'Not Relevant' : 'Not Relevant'}</span>
           </button>
         </div>
       </div>

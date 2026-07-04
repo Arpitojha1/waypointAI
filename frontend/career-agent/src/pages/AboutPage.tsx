@@ -1,129 +1,104 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Brain, GitBranch, Layers, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Sparkles, Brain, GitBranch, Layers, ShieldCheck, ArrowRight } from 'lucide-react';
 
 export const AboutPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '64px', textAlign: 'left' }}>
+    <div className="about-container">
       <button
         type="button"
         onClick={() => navigate('/dashboard')}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          color: 'var(--color-ash-gray)',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontFamily: 'var(--font-ui)',
-          fontSize: '14px',
-          cursor: 'pointer',
-          marginBottom: '32px',
-          padding: 0,
-        }}
+        className="about-back-btn"
       >
         <ArrowLeft size={16} />
         <span>Back to Dashboard</span>
       </button>
 
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '100px', background: 'rgba(157, 149, 255, 0.1)', border: '1px solid var(--color-memify-violet)', color: 'var(--color-memify-violet)', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>
-        <Brain size={14} />
-        <span>Cognee Hackathon 2026 Submission</span>
+      <div className="about-header">
+        <div className="about-badge">
+          <Brain size={14} />
+          <span>Cognee Hackathon 2026 Submission</span>
+        </div>
+
+        <h1 className="text-page-heading" style={{ marginBottom: '16px', color: 'var(--color-cream-glow)' }}>
+          About Waypoint AI
+        </h1>
+
+        <p className="text-body" style={{ color: 'var(--color-ash-gray)', lineHeight: 1.6, fontSize: '18px', maxWidth: '800px' }}>
+          Waypoint is an AI career opportunity agent built to bridge the gap between ambitious engineers and high-impact opportunities. By combining real-time ingestion of jobs, hackathons, and open-source issues with Cognee's dynamic knowledge graph memory, Waypoint generates step-by-step roadmaps tailored to your unique skill gap.
+        </p>
       </div>
 
-      <h1 className="text-page-heading" style={{ marginBottom: '16px', color: 'var(--color-cream-glow)' }}>
-        About Waypoint AI
-      </h1>
+      <div className="about-bento-grid">
+        {/* Hero Bento Card (Spans across top) */}
+        <div className="bento-card hero-span">
+          <div className="bento-card-header" style={{ color: 'var(--color-memify-violet)' }}>
+            <Brain size={26} />
+            <h3 className="bento-card-title">Cognee Memory Graph & Adaptive Intelligence</h3>
+          </div>
+          <p className="bento-card-desc" style={{ maxWidth: '780px' }}>
+            Unlike static generators that forget your context, Waypoint leverages Cognee's full graph memory lifecycle to continuously steer and adapt milestone order as you interact with steps.
+          </p>
 
-      <p className="text-body" style={{ color: 'var(--color-ash-gray)', lineHeight: 1.6, marginBottom: '40px', fontSize: '18px' }}>
-        Waypoint is an AI career opportunity agent built to bridge the gap between ambitious engineers and high-impact opportunities. By combining real-time ingestion of jobs, hackathons, and open-source issues with Cognee's dynamic knowledge graph memory, Waypoint generates step-by-step roadmaps tailored to your unique skill gap.
-      </p>
+          <div className="bento-memory-flow">
+            <span style={{ color: 'var(--color-ash-gray)' }}>Lifecycle:</span>
+            <span className="bento-step-pill">1. remember(profile)</span>
+            <ArrowRight size={14} className="bento-arrow" />
+            <span className="bento-step-pill">2. recall(context)</span>
+            <ArrowRight size={14} className="bento-arrow" />
+            <span className="bento-step-pill" style={{ background: 'var(--color-memify-violet)', color: 'var(--color-void-black)' }}>3. improve / memify(feedback)</span>
+            <ArrowRight size={14} className="bento-arrow" />
+            <span className="bento-step-pill">4. forget(skipped)</span>
+          </div>
+        </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '48px' }}>
-        <div style={{
-          padding: '24px',
-          borderRadius: 'var(--radius-card)',
-          background: 'var(--color-void-black)',
-          border: '1px solid var(--color-olive-stone)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', color: 'var(--color-job-blue)' }}>
+        {/* Secondary Card 1 */}
+        <div className="bento-card">
+          <div className="bento-card-header" style={{ color: 'var(--color-job-blue)' }}>
             <Layers size={22} />
-            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-cream-glow)' }}>Multi-Source Ingestion</h3>
+            <h3 className="bento-card-title">Multi-Source Ingestion</h3>
           </div>
-          <p style={{ fontSize: '15px', color: 'var(--color-ash-gray)', lineHeight: 1.5 }}>
-            Ingests real-world opportunities from Arbeitnow (jobs), Devpost (hackathons), and GitHub (good first issues) into a unified, clean schema.
+          <p className="bento-card-desc">
+            Ingests real-world opportunities from Arbeitnow (jobs), Devpost (hackathons), and GitHub (good first issues) into a unified, clean schema ready for AI orchestration.
           </p>
         </div>
 
-        <div style={{
-          padding: '24px',
-          borderRadius: 'var(--radius-card)',
-          background: 'var(--color-void-black)',
-          border: '1px solid var(--color-olive-stone)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', color: 'var(--color-memify-violet)' }}>
-            <Brain size={22} />
-            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-cream-glow)' }}>Cognee Memory Graph</h3>
-          </div>
-          <p style={{ fontSize: '15px', color: 'var(--color-ash-gray)', lineHeight: 1.5 }}>
-            Uses Cognee's full memory lifecycle (`remember`, `recall`, `improve`/`memify`, `forget`) to continuously adapt milestone order as you complete tasks.
-          </p>
-        </div>
-
-        <div style={{
-          padding: '24px',
-          borderRadius: 'var(--radius-card)',
-          background: 'var(--color-void-black)',
-          border: '1px solid var(--color-olive-stone)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', color: '#0ae448' }}>
+        {/* Secondary Card 2 */}
+        <div className="bento-card">
+          <div className="bento-card-header" style={{ color: '#0ae448' }}>
             <Sparkles size={22} />
-            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-cream-glow)' }}>Anthropic Tool-Use Loop</h3>
+            <h3 className="bento-card-title">Anthropic Tool-Use Loop</h3>
           </div>
-          <p style={{ fontSize: '15px', color: 'var(--color-ash-gray)', lineHeight: 1.5 }}>
-            Powered by a hand-written orchestrator and role-scoped system prompts executing direct tool calls without heavy framework bloat.
+          <p className="bento-card-desc">
+            Powered by a lightweight, hand-written orchestrator and role-scoped system prompts executing direct tool calls without heavy framework abstraction bloat.
           </p>
         </div>
 
-        <div style={{
-          padding: '24px',
-          borderRadius: 'var(--radius-card)',
-          background: 'var(--color-void-black)',
-          border: '1px solid var(--color-olive-stone)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', color: 'var(--color-hackathon-orange)' }}>
+        {/* Secondary Card 3 */}
+        <div className="bento-card" style={{ gridColumn: '1 / -1' }}>
+          <div className="bento-card-header" style={{ color: 'var(--color-hackathon-orange)' }}>
             <ShieldCheck size={22} />
-            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-cream-glow)' }}>BYOK & RLS Security</h3>
+            <h3 className="bento-card-title">BYOK & RLS Postgres Security</h3>
           </div>
-          <p style={{ fontSize: '15px', color: 'var(--color-ash-gray)', lineHeight: 1.5 }}>
-            Bring Your Own Key (OpenRouter/Nemotron free tier supported) encrypted in Postgres via pgcrypto, protected by Row-Level Security.
+          <p className="bento-card-desc">
+            Bring Your Own Key (OpenRouter/Nemotron free tier supported) encrypted in Postgres via pgcrypto, protected by strict Supabase Row-Level Security policies.
           </p>
         </div>
       </div>
 
-      <div style={{
-        padding: '32px',
-        borderRadius: 'var(--radius-card)',
-        background: 'rgba(255, 252, 225, 0.03)',
-        border: '1px solid var(--color-olive-stone)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '20px',
-      }}>
+      <div className="about-source-bar">
         <div>
           <h4 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-cream-glow)', marginBottom: '6px' }}>
             Explore the Source Code
           </h4>
           <p style={{ fontSize: '14px', color: 'var(--color-ash-gray)' }}>
-            Built with FastAPI, SQLAlchemy Async, Cognee, React 19, and Vite.
+            Built with FastAPI, SQLAlchemy Async, Cognee, React 19, and Vite 8.
           </p>
         </div>
         <a
-          href="https://github.com"
+          href="https://github.com/Arpitojha1/waypointAI"
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -137,6 +112,7 @@ export const AboutPage: React.FC = () => {
             fontWeight: 600,
             fontSize: '14px',
             textDecoration: 'none',
+            transition: 'opacity 0.2s ease',
           }}
         >
           <GitBranch size={18} />
@@ -146,3 +122,4 @@ export const AboutPage: React.FC = () => {
     </div>
   );
 };
+

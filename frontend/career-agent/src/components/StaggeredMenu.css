@@ -85,14 +85,15 @@
   width: 100%;
   max-width: 400px;
   height: 100vh;
-  background-color: var(--color-cream-glow);
-  color: var(--color-void-black);
+  background-color: var(--color-void-black);
+  border-left: 1px solid var(--border-hairline);
+  color: var(--color-cream-glow);
   z-index: 1060;
   padding: var(--spacing-40) var(--spacing-32);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: -20px 0 50px rgba(0, 0, 0, 0.5);
+  box-shadow: none;
   transform: translateX(100%);
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   overflow-y: auto;
@@ -108,14 +109,14 @@
   justify-content: space-between;
   align-items: center;
   padding-bottom: var(--spacing-24);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid var(--border-hairline);
 }
 
 .menu-panel-brand {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--color-void-black);
+  color: var(--color-cream-glow);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -123,8 +124,8 @@
 
 .menu-close-btn {
   background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  color: var(--color-void-black);
+  border: 1px solid var(--border-strong);
+  color: var(--color-cream-glow);
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -136,8 +137,8 @@
 }
 
 .menu-close-btn:hover {
-  background: var(--color-void-black);
-  color: var(--color-cream-glow);
+  background: var(--color-cream-glow);
+  color: var(--color-void-black);
   transform: rotate(90deg);
 }
 
@@ -167,10 +168,10 @@
   justify-content: space-between;
   font-size: 28px;
   font-weight: 600;
-  color: var(--color-void-black);
+  color: var(--color-cream-glow);
   text-decoration: none;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--border-hairline);
   transition: all 0.2s ease;
 }
 
@@ -186,10 +187,10 @@
 /* Panel Footer */
 .menu-panel-footer {
   padding-top: var(--spacing-24);
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid var(--border-hairline);
   font-family: var(--font-mono);
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--color-ash-gray);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -200,6 +201,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 252, 225, 0.04);
+  border: 1px solid var(--border-hairline);
   border-radius: var(--radius-card);
 }

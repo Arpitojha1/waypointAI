@@ -250,9 +250,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
             <div
               className="card-face card-front"
               onClick={() => !isFlipped && triggerFlip(true)}
+              onKeyDown={(e) => {
+                if ((e.key === 'Enter' || e.key === ' ') && !isFlipped) {
+                  e.preventDefault();
+                  triggerFlip(true);
+                }
+              }}
               role="button"
               tabIndex={0}
               aria-label="Click to flip and edit profile"
+              aria-expanded={isFlipped}
             >
               <div className="card-front-header">
                 <div className="card-id-tag">

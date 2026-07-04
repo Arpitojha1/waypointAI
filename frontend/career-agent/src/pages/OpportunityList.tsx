@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Opportunity, OpportunityType } from '../types';
 import { OpportunityCard } from '../components/OpportunityCard';
-import { Sparkles, Briefcase, Trophy, GitPullRequest, Layers, RefreshCw } from 'lucide-react';
+import { Info, Briefcase, Trophy, GitPullRequest, Layers, RefreshCw } from 'lucide-react';
 
 interface OpportunityListProps {
   opportunities: Opportunity[];
@@ -27,15 +27,16 @@ export const OpportunityList: React.FC<OpportunityListProps> = ({
   return (
     <div>
       <div style={{ marginBottom: '40px', textAlign: 'left' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '100px', background: 'rgba(10, 228, 72, 0.1)', border: '1px solid #0ae448', color: '#0ae448', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>
-          <Sparkles size={14} />
-          <span>Powered by Cognee Memory & Nemotron Free</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+          <h1 className="text-page-heading" style={{ margin: 0 }}>
+            Targeted Career Opportunities
+          </h1>
+          <span title="Powered by Cognee Memory & Nemotron Free" style={{ cursor: 'help', color: 'var(--color-ash-gray)', display: 'inline-flex' }}>
+            <Info size={18} />
+          </span>
         </div>
-        <h1 className="text-page-heading" style={{ marginBottom: '12px' }}>
-          Targeted Career Opportunities
-        </h1>
         <p className="text-body" style={{ color: 'var(--color-ash-gray)', maxWidth: '720px' }}>
-          Select any opportunity below to orchestrate a personalized, multi-step career roadmap. Waypoint analyzes the skill gap against your Cognee knowledge graph and generates actionable milestones.
+          Select any opportunity below to orchestrate a personalized, multi-step career roadmap tailored to your skill gap.
         </p>
       </div>
 

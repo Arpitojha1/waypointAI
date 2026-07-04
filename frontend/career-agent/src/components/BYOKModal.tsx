@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Cpu, ShieldCheck, X, Key, Check, Globe, Sliders } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Cpu, Info, X, Key, Check, Globe, Sliders } from 'lucide-react';
 import type { BYOKSettings } from '../api';
 
 interface BYOKModalProps {
@@ -20,6 +20,7 @@ export const BYOKModal: React.FC<BYOKModalProps> = ({
   const [inputEndpoint, setInputEndpoint] = useState(settings.byok_endpoint || '');
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -28,6 +29,48 @@ export const BYOKModal: React.FC<BYOKModalProps> = ({
       setInputEndpoint(settings.byok_endpoint || '');
     }
   }, [isOpen, settings]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Focus first focusable element when opened
+    const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusableElements && focusableElements.length > 0) {
+      focusableElements[0].focus();
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusables = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const firstElement = focusables[0];
+        const lastElement = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            lastElement.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            firstElement.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -54,36 +97,18 @@ export const BYOKModal: React.FC<BYOKModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content" ref={modalRef} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Cpu className="text-issue-green" size={24} style={{ color: 'var(--color-issue-green)' }} />
             <h3 className="modal-title">LLM & BYOK Configuration</h3>
+            <span title="Configure your OpenRouter model, API key, and endpoint. Default: nvidia/nemotron-3-super-120b-a12b:free." style={{ cursor: 'help', color: 'var(--color-ash-gray)', display: 'inline-flex' }}>
+              <Info size={16} />
+            </span>
           </div>
           <button type="button" className="modal-close" onClick={onClose}>
             <X size={20} />
           </button>
-        </div>
-
-        <div style={{
-          padding: '16px',
-          borderRadius: '8px',
-          background: 'rgba(10, 228, 72, 0.08)',
-          border: '1px solid rgba(10, 228, 72, 0.3)',
-          marginBottom: '24px',
-          fontSize: '14px',
-          color: 'var(--color-cream-glow)',
-          display: 'flex',
-          gap: '12px',
-          alignItems: 'flex-start',
-        }}>
-          <ShieldCheck size={20} style={{ color: 'var(--color-issue-green)', flexShrink: 0, marginTop: '2px' }} />
-          <div>
-            <div style={{ fontWeight: 600, marginBottom: '4px' }}>Model & API Configuration</div>
-            <div style={{ fontSize: '13px', opacity: 0.85, lineHeight: 1.4 }}>
-              Configure your OpenRouter model, API key, and endpoint. By default, Waypoint uses <strong>nvidia/nemotron-3-super-120b-a12b:free</strong> to prevent budget errors.
-            </div>
-          </div>
         </div>
 
         <form onSubmit={handleSave}>
