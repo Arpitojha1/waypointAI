@@ -295,14 +295,18 @@ async def generate_roadmap(
             byok_model
             or getattr(settings, "OPENROUTER_MODEL", "")
             or os.environ.get("OPENROUTER_MODEL", "")
-            or "nvidia/nemotron-3-super-120b-a12b:free"
+            or "openai/gpt-4o-mini"
         )
         model_name = default_free_model
+        if "nemotron" in model_name.lower():
+            model_name = "openai/gpt-4o-mini"
         if model_name.startswith("openrouter/"):
             model_name = model_name.replace("openrouter/", "", 1)
     else:
-        default_free_model = getattr(settings, "OPENROUTER_MODEL", "") or os.environ.get("OPENROUTER_MODEL", "") or "nvidia/nemotron-3-super-120b-a12b:free"
+        default_free_model = getattr(settings, "OPENROUTER_MODEL", "") or os.environ.get("OPENROUTER_MODEL", "") or "openai/gpt-4o-mini"
         model_name = getattr(llm_client, "_model_name", default_free_model)
+        if "nemotron" in model_name.lower():
+            model_name = "openai/gpt-4o-mini"
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -334,12 +338,24 @@ async def generate_roadmap(
                 ),
                 timeout=30.0,
             )
-        except asyncio.TimeoutError:
-            logger.error("PERF: [LLM_CALL iter=%d model=%s] TIMEOUT after 30s", iterations, model_name)
-            break
-        except Exception as exc:
-            logger.error("Error calling LLM during roadmap generation: %s", exc)
-            break
+        except (asyncio.TimeoutError, Exception) as exc:
+            logger.warning("Error calling LLM with %s (%s). Retrying with free fallback model...", model_name, exc)
+            try:
+                fallback_model = "openai/gpt-oss-20b:free" if "gpt-oss" not in model_name else "nvidia/nemotron-3-super-120b-a12b:free"
+                response = await asyncio.wait_for(
+                    llm_client.chat.completions.create(
+                        model=fallback_model,
+                        messages=messages,
+                        tools=ROADMAP_TOOLS,
+                        max_tokens=2200,
+                        temperature=0.2,
+                    ),
+                    timeout=30.0,
+                )
+                model_name = fallback_model
+            except Exception as exc2:
+                logger.error("Error calling fallback LLM during roadmap generation: %s", exc2)
+                break
         logger.info("PERF: [LLM_CALL iter=%d model=%s] %.3fs", iterations, model_name, time.perf_counter() - t0)
 
         message = response.choices[0].message
@@ -533,6 +549,14 @@ async def generate_roadmap(
 
     created_steps: List[Step] = []
     for idx, s_dict in enumerate(steps_data, start=1):
+        raw_links = s_dict.get("resource_links", [])
+        clean_links = []
+        if isinstance(raw_links, list):
+            for item in raw_links:
+                if isinstance(item, str):
+                    clean_links.append({"title": item[:30], "url": item})
+                elif isinstance(item, dict):
+                    clean_links.append(item)
         step_obj = Step(
             roadmap_id=roadmap.id,
             user_id=user_id,
@@ -540,7 +564,7 @@ async def generate_roadmap(
             description=s_dict.get("description", ""),
             order_index=s_dict.get("order_index", idx),
             status=StepStatus.PENDING,
-            resource_links=s_dict.get("resource_links", []),
+            resource_links=clean_links,
             is_memified=s_dict.get("is_memified", False),
         )
         session.add(step_obj)

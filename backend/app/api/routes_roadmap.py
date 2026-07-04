@@ -42,7 +42,7 @@ class StepResponse(BaseModel):
     description: Optional[str]
     order_index: int
     status: StepStatus
-    resource_links: Optional[List[Dict[str, str]]] = None
+    resource_links: Optional[List[Any]] = None
     is_memified: bool
     created_at: datetime
 

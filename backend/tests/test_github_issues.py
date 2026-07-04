@@ -44,7 +44,7 @@ def test_normalize_issue():
     assert opp.title == "Add async support to database client"
     assert opp.description == "We need to migrate our DB calls to asyncpg."
     assert opp.url == "https://github.com/test-owner/test-repo/issues/101"
-    assert opp.source == "github"
+    assert opp.source == "github_issue"
     assert opp.repo_owner == "test-owner"
     assert opp.repo_name == "test-repo"
     assert opp.issue_number == 101
@@ -63,7 +63,7 @@ def test_opportunity_to_dict():
         title="Test Issue",
         description="Test Body",
         url="https://github.com/owner/repo/issues/1",
-        source="github",
+        source="github_issue",
         repo_owner="owner",
         repo_name="repo",
         issue_number=1,
@@ -99,8 +99,8 @@ async def test_fetch_good_first_issues_success():
     ]
 
     def handler(request: httpx.Request) -> httpx.Response:
-        assert "labels=good+first+issue" in str(request.url) or "labels=good%20first%20issue" in str(request.url)
-        return httpx.Response(200, json=mock_data, headers={"X-RateLimit-Remaining": "50"})
+        assert "q=" in str(request.url) and ("good+first+issue" in str(request.url) or "good%20first%20issue" in str(request.url))
+        return httpx.Response(200, json={"items": mock_data}, headers={"X-RateLimit-Remaining": "50"})
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as client:
@@ -121,7 +121,7 @@ async def test_fetch_good_first_issues_rate_limit_backoff():
             # Return 403 rate limit with Retry-After: 1
             return httpx.Response(403, headers={"Retry-After": "1"}, text="API rate limit exceeded")
         # Second call succeeds
-        return httpx.Response(200, json=[{"number": 10, "title": "After backoff", "state": "open"}])
+        return httpx.Response(200, json={"items": [{"number": 10, "title": "After backoff", "state": "open"}]})
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as client:
@@ -147,7 +147,7 @@ async def test_ingest_github_issues(monkeypatch):
     ]
 
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json=mock_data)
+        return httpx.Response(200, json={"items": mock_data})
 
     transport = httpx.MockTransport(handler)
     
@@ -191,4 +191,39 @@ async def test_verify_github_issue_open():
         assert await verify_github_issue_open("owner", "repo", 2, client=client) is False
         assert await verify_github_issue_open("owner", "repo", 3, client=client) is False
         assert await verify_github_issue_open("owner", "repo", 4, client=client) is True
+
+
+@pytest.mark.asyncio
+async def test_ingest_github_issues_hardcoded_repos(monkeypatch):
+    mock_data = [
+        {
+            "number": 1,
+            "title": "Hardcoded repo issue",
+            "body": "Body test",
+            "html_url": "https://github.com/owner/repo/issues/1",
+            "state": "open",
+        }
+    ]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"items": mock_data})
+
+    transport = httpx.MockTransport(handler)
+
+    remember_calls = []
+    async def mock_remember(data, data_type, dataset_name=None, user_id=None, session_id=None):
+        remember_calls.append((data, data_type, dataset_name, user_id))
+        return "mock_remember_result"
+
+    monkeypatch.setattr("app.ingestion.github_issues.remember", mock_remember)
+
+    async with httpx.AsyncClient(transport=transport) as client:
+        opps = await ingest_github_issues(client=client)
+        # Should ingest 1 issue per hardcoded repo (10 repos)
+        assert len(opps) == 10
+        assert len(remember_calls) == 10
+        for data, dtype, dsname, uid in remember_calls:
+            assert dtype == "issue"
+            assert dsname == "issue"
+            assert data["title"] == "Hardcoded repo issue"
 

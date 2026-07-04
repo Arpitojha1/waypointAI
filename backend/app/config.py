@@ -32,7 +32,7 @@ class Settings(BaseSettings):
 
     # --- OpenRouter (BYOK fallback) ---
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    OPENROUTER_MODEL: str = "nvidia/nemotron-3-super-120b-a12b:free"
+    OPENROUTER_MODEL: str = "openai/gpt-4o-mini"
     LLM_API_KEY: str = ""
     LLM_MODEL: str = ""
 

@@ -29,6 +29,19 @@ from app.agents.prompts.ingestion import INGESTION_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
+HARDCODED_REPOSITORIES: List[str] = [
+    "pytorch/pytorch",
+    "microsoft/vscode",
+    "matplotlib/matplotlib",
+    "vercel/next.js",
+    "storybookjs/storybook",
+    "gatsbyjs/gatsby",
+    "appwrite/appwrite",
+    "godotengine/godot",
+    "angular/angular",
+    "supabase/supabase",
+]
+
 
 async def fetch_good_first_issues(
     owner: str,
@@ -46,7 +59,7 @@ async def fetch_good_first_issues(
     logging warnings, and backing off exponentially or via Retry-After/X-RateLimit-Reset.
     Does not crash on rate limit exhaustion or network failure.
     """
-    url = f"https://api.github.com/repos/{owner}/{repo}/issues"
+    url = "https://api.github.com/search/issues"
     headers = {
         "Accept": "application/vnd.github+json",
         "User-Agent": "Waypoint-Career-Agent/0.1.0",
@@ -70,9 +83,7 @@ async def fetch_good_first_issues(
     try:
         while len(issues) < max_issues:
             params = {
-                "state": "open",
-                "labels": label,
-                "assignee": "none",
+                "q": f'repo:{owner}/{repo} is:open is:issue label:"{label}"',
                 "per_page": per_page,
                 "page": page,
             }
@@ -100,21 +111,29 @@ async def fetch_good_first_issues(
                                 owner, repo, reset_time,
                             )
                         data = response.json()
-                        if not isinstance(data, list):
-                            logger.error("Unexpected GitHub API response format for %s/%s: not a list.", owner, repo)
+                        if not isinstance(data, dict):
+                            logger.error("Unexpected GitHub Search API response format for %s/%s: not a dict.", owner, repo)
                             break
 
-                        # GitHub API returns pull requests inside /issues endpoint; filter them out and ensure state is open
-                        page_issues = [item for item in data if isinstance(item, dict) and "pull_request" not in item and item.get("state") == "open"]
+                        items = data.get("items", [])
+                        if not isinstance(items, list):
+                            logger.error("Unexpected GitHub Search API items format for %s/%s: not a list.", owner, repo)
+                            break
+
+                        # Filter out any PRs just in case, and ensure state is open
+                        page_issues = [
+                            item for item in items
+                            if isinstance(item, dict) and "pull_request" not in item and item.get("state", "open") == "open"
+                        ]
                         issues.extend(page_issues)
                         success = True
 
-                        if len(data) < per_page:
+                        if len(items) < per_page or len(issues) >= max_issues:
                             # Last page reached
                             return issues[:max_issues]
 
-                    elif response.status_code == 404:
-                        logger.error("GitHub repository %s/%s not found (404).", owner, repo)
+                    elif response.status_code in (404, 422):
+                        logger.error("GitHub repository %s/%s not found or unsearchable (%d).", owner, repo, response.status_code)
                         return issues
 
                     elif response.status_code in (403, 429):
@@ -209,7 +228,7 @@ def normalize_issue(raw: Dict[str, Any], owner: str, repo: str) -> Opportunity:
         title=title,
         description=description,
         url=url,
-        source="github",
+        source="github_issue",
         metadata_=metadata,
         repo_owner=owner[:255],
         repo_name=repo[:255],
@@ -297,8 +316,8 @@ def opportunity_to_dict(
 
 
 async def ingest_github_issues(
-    owner: str,
-    repo: str,
+    owner: Optional[str] = None,
+    repo: Optional[str] = None,
     label: str = "good first issue",
     max_issues: int = 30,
     remember_in_cognee: bool = True,
@@ -306,45 +325,61 @@ async def ingest_github_issues(
 ) -> List[Opportunity]:
     """
     Orchestrate full ingestion:
-    1. Fetch good first issues from GitHub API.
+    1. Fetch good first issues from GitHub API. If owner/repo not given, loop over HARDCODED_REPOSITORIES.
     2. Normalize each into an Opportunity schema object.
     3. Call cognee.remember() with dataset_name="issue" (shared public data),
        using the ingestion-role system prompt scoping.
     """
-    raw_issues = await fetch_good_first_issues(
-        owner=owner,
-        repo=repo,
-        label=label,
-        max_issues=max_issues,
-        client=client,
-    )
+    if owner and repo:
+        repos = [f"{owner}/{repo}"]
+    else:
+        repos = HARDCODED_REPOSITORIES
 
-    opportunities: List[Opportunity] = []
-    for raw in raw_issues:
-        opp = normalize_issue(raw, owner, repo)
-        opportunities.append(opp)
+    all_opportunities: List[Opportunity] = []
+    for repo_full in repos:
+        try:
+            parts = repo_full.split("/", 1)
+            if len(parts) != 2:
+                continue
+            r_owner, r_repo = parts[0], parts[1]
+            raw_issues = await fetch_good_first_issues(
+                owner=r_owner,
+                repo=r_repo,
+                label=label,
+                max_issues=max_issues,
+                client=client,
+            )
 
-        if remember_in_cognee:
-            try:
-                opp_dict = opportunity_to_dict(opp, system_prompt=INGESTION_SYSTEM_PROMPT)
-                logger.info(
-                    "Remembering issue #%s in Cognee dataset 'issue'...",
-                    opp.issue_number,
-                )
-                await remember(
-                    data=opp_dict,
-                    data_type="issue",
-                    dataset_name="issue",
-                )
-            except Exception as exc:
-                # Log error and continue — don't crash ingestion run on memory storage failure
-                logger.error(
-                    "Failed to remember issue #%s in Cognee: %s",
-                    opp.issue_number, exc, exc_info=True,
-                )
+            opportunities: List[Opportunity] = []
+            for raw in raw_issues:
+                opp = normalize_issue(raw, r_owner, r_repo)
+                opportunities.append(opp)
+                all_opportunities.append(opp)
 
-    logger.info(
-        "Successfully ingested %d issues for repository %s/%s.",
-        len(opportunities), owner, repo,
-    )
-    return opportunities
+                if remember_in_cognee:
+                    try:
+                        opp_dict = opportunity_to_dict(opp, system_prompt=INGESTION_SYSTEM_PROMPT)
+                        logger.info(
+                            "Remembering issue #%s in Cognee dataset 'issue'...",
+                            opp.issue_number,
+                        )
+                        await remember(
+                            data=opp_dict,
+                            data_type="issue",
+                            dataset_name="issue",
+                        )
+                    except Exception as exc:
+                        # Log error and continue — don't crash ingestion run on memory storage failure
+                        logger.error(
+                            "Failed to remember issue #%s in Cognee: %s",
+                            opp.issue_number, exc, exc_info=True,
+                        )
+
+            logger.info(
+                "Successfully ingested %d issues for repository %s/%s.",
+                len(opportunities), r_owner, r_repo,
+            )
+        except Exception as exc:
+            logger.error("Error ingesting repository %s: %s", repo_full, exc, exc_info=True)
+
+    return all_opportunities

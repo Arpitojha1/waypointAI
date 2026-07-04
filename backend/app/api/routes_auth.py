@@ -5,6 +5,7 @@ POST /api/profile/seed - Seed/onboard user profile in Postgres and Cognee
 GET /api/profile/me - Get current user's profile
 """
 
+import os
 import uuid
 import logging
 from typing import Optional, List, Dict, Any
@@ -230,7 +231,14 @@ async def save_byok_settings(
 async def get_test_token():
     """
     Development/Demo helper: get a valid JWT token for testing.
+    Gated: Only works when ENABLE_BACKEND_ACCESS_CONTROL="false".
     """
+    if os.environ.get("ENABLE_BACKEND_ACCESS_CONTROL", "true").lower() != "false":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Development token endpoint is disabled when access control is enabled."
+        )
+
     import time
     from jose import jwt
     from app.config import settings
