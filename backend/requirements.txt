@@ -30,6 +30,7 @@ httpx>=0.27.0
 # Encryption (BYOK key encryption helper — uses pgcrypto via SQL)
 # pgcrypto is a Postgres extension, no Python package needed;
 # we call it via SQLAlchemy raw SQL.
+PyJWT[crypto]>=2.8.0
 
 # Dev/test
 pytest>=8.0.0

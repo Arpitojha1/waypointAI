@@ -3,6 +3,10 @@ Waypoint API — Supabase Auth Dependency
 
 Verifies Supabase JWTs and extracts the authenticated user_id.
 Used as a FastAPI dependency for protected endpoints.
+
+Supabase now issues ES256-signed JWTs verified via a per-project JWKS
+endpoint, rather than a single shared HS256 secret. This module fetches
+and caches the public signing key from Supabase's JWKS endpoint.
 """
 
 import uuid
@@ -10,7 +14,9 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jwt import PyJWKClient
+import jwt as pyjwt
+from jwt.exceptions import PyJWTError
 
 from app.config import settings
 
@@ -19,9 +25,18 @@ import os
 # Bearer token extractor
 security = HTTPBearer(auto_error=False)
 
-# Supabase JWT config
-ALGORITHM = "HS256"
 AUDIENCE = "authenticated"
+
+# Cached JWKS client — fetches and caches Supabase's public signing keys
+_jwks_client: Optional[PyJWKClient] = None
+
+
+def _get_jwks_client() -> PyJWKClient:
+    global _jwks_client
+    if _jwks_client is None:
+        jwks_url = f"{settings.SUPABASE_URL}/auth/v1/.well-known/jwks.json"
+        _jwks_client = PyJWKClient(jwks_url)
+    return _jwks_client
 
 
 class AuthenticatedUser:
@@ -40,7 +55,7 @@ async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> AuthenticatedUser:
     """
-    FastAPI dependency: decode & verify a Supabase JWT.
+    FastAPI dependency: decode & verify a Supabase JWT via JWKS.
 
     Returns an AuthenticatedUser with user_id (sub claim).
     Raises 401 if the token is missing, expired, or invalid.
@@ -65,10 +80,13 @@ async def get_current_user(
     token = credentials.credentials
 
     try:
-        payload = jwt.decode(
+        jwks_client = _get_jwks_client()
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+
+        payload = pyjwt.decode(
             token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=[ALGORITHM],
+            signing_key.key,
+            algorithms=["ES256"],
             audience=AUDIENCE,
         )
 
@@ -82,5 +100,5 @@ async def get_current_user(
 
         return AuthenticatedUser(user_id=user_id, email=email, role=role)
 
-    except (JWTError, ValueError) as e:
+    except (PyJWTError, ValueError) as e:
         raise credentials_exception from e
