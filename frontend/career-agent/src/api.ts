@@ -1,6 +1,8 @@
 import type { Opportunity, OpportunityType, Roadmap, Step, StepStatus, UserProfile } from './types';
 import { supabase } from './supabase';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 let authToken: string | null = localStorage.getItem('waypoint_token');
 
 export function clearAuthToken(): void {
@@ -23,7 +25,7 @@ export async function getAuthToken(): Promise<string> {
   if (authToken) return authToken;
 
   try {
-    const res = await fetch('/api/profile/token');
+    const res = await fetch(`${API_BASE_URL}/api/profile/token`);
     if (res.ok) {
       const data = await res.json();
       authToken = data.access_token;
@@ -52,7 +54,9 @@ async function getHeaders(requireAuth = false): Promise<HeadersInit> {
 }
 
 export async function fetchOpportunities(typeFilter?: OpportunityType): Promise<Opportunity[]> {
-  const url = typeFilter ? `/api/opportunities?type=${typeFilter}` : '/api/opportunities';
+  const url = typeFilter
+    ? `${API_BASE_URL}/api/opportunities?type=${typeFilter}`
+    : `${API_BASE_URL}/api/opportunities`;
   const res = await fetch(url, { headers: await getHeaders(false) });
   if (!res.ok) {
     throw new Error(`Failed to fetch opportunities: ${res.statusText}`);
@@ -61,7 +65,7 @@ export async function fetchOpportunities(typeFilter?: OpportunityType): Promise<
 }
 
 export async function fetchOpportunity(id: string): Promise<Opportunity> {
-  const res = await fetch(`/api/opportunities/${id}`, { headers: await getHeaders(false) });
+  const res = await fetch(`${API_BASE_URL}/api/opportunities/${id}`, { headers: await getHeaders(false) });
   if (!res.ok) {
     throw new Error(`Failed to fetch opportunity: ${res.statusText}`);
   }
@@ -69,7 +73,7 @@ export async function fetchOpportunity(id: string): Promise<Opportunity> {
 }
 
 export async function createRoadmap(opportunityId: string, rememberInCognee = true, forceRegenerate = false): Promise<Roadmap> {
-  const res = await fetch('/api/roadmaps', {
+  const res = await fetch(`${API_BASE_URL}/api/roadmaps`, {
     method: 'POST',
     headers: await getHeaders(true),
     body: JSON.stringify({
@@ -86,7 +90,7 @@ export async function createRoadmap(opportunityId: string, rememberInCognee = tr
 }
 
 export async function fetchRoadmap(id: string): Promise<Roadmap> {
-  const res = await fetch(`/api/roadmaps/${id}`, { headers: await getHeaders(true) });
+  const res = await fetch(`${API_BASE_URL}/api/roadmaps/${id}`, { headers: await getHeaders(true) });
   if (!res.ok) {
     throw new Error(`Failed to load roadmap: ${res.statusText}`);
   }
@@ -94,7 +98,7 @@ export async function fetchRoadmap(id: string): Promise<Roadmap> {
 }
 
 export async function fetchRoadmapByOpportunity(opportunityId: string): Promise<Roadmap | null> {
-  const res = await fetch(`/api/roadmaps/by-opportunity/${opportunityId}`, {
+  const res = await fetch(`${API_BASE_URL}/api/roadmaps/by-opportunity/${opportunityId}`, {
     headers: await getHeaders(true),
   });
   if (res.status === 404) return null;
@@ -109,7 +113,7 @@ export async function submitStepFeedback(
   status: StepStatus,
   notes?: string
 ): Promise<{ step: Step; message: string }> {
-  const res = await fetch(`/api/steps/${stepId}/feedback`, {
+  const res = await fetch(`${API_BASE_URL}/api/steps/${stepId}/feedback`, {
     method: 'POST',
     headers: await getHeaders(true),
     body: JSON.stringify({ status, notes }),
@@ -126,7 +130,7 @@ export async function submitStepEdit(
   description: string,
   action: 'accept' | 'improve'
 ): Promise<{ id: string; description: string; message: string }> {
-  const res = await fetch(`/api/steps/${stepId}/edit`, {
+  const res = await fetch(`${API_BASE_URL}/api/steps/${stepId}/edit`, {
     method: 'POST',
     headers: await getHeaders(true),
     body: JSON.stringify({ description, action }),
@@ -139,7 +143,7 @@ export async function submitStepEdit(
 }
 
 export async function fetchMyProfile(): Promise<UserProfile | null> {
-  const res = await fetch('/api/profile/me', { headers: await getHeaders(true) });
+  const res = await fetch(`${API_BASE_URL}/api/profile/me`, { headers: await getHeaders(true) });
   if (res.status === 404) return null;
   if (!res.ok) {
     throw new Error(`Failed to load profile: ${res.statusText}`);
@@ -153,7 +157,7 @@ export async function seedProfile(payload: {
   experience_summary: string;
   preferences?: Record<string, any>;
 }): Promise<UserProfile> {
-  const res = await fetch('/api/profile/seed', {
+  const res = await fetch(`${API_BASE_URL}/api/profile/seed`, {
     method: 'POST',
     headers: await getHeaders(true),
     body: JSON.stringify({
@@ -175,7 +179,7 @@ export interface BYOKSettings {
 }
 
 export async function fetchBYOKSettings(): Promise<BYOKSettings> {
-  const res = await fetch('/api/profile/byok', { headers: await getHeaders(true) });
+  const res = await fetch(`${API_BASE_URL}/api/profile/byok`, { headers: await getHeaders(true) });
   if (!res.ok) {
     return {};
   }
@@ -183,7 +187,7 @@ export async function fetchBYOKSettings(): Promise<BYOKSettings> {
 }
 
 export async function saveBYOKSettings(payload: BYOKSettings): Promise<BYOKSettings> {
-  const res = await fetch('/api/profile/byok', {
+  const res = await fetch(`${API_BASE_URL}/api/profile/byok`, {
     method: 'POST',
     headers: await getHeaders(true),
     body: JSON.stringify(payload),
