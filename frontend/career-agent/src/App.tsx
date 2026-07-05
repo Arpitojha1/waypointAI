@@ -12,12 +12,13 @@ import { LandingPage } from './pages/LandingPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AboutPage } from './pages/AboutPage';
 import { SignupPage } from './pages/SignupPage';
+import { LoginPage } from './pages/LoginPage';
 import { fetchOpportunities, createRoadmap, fetchRoadmapByOpportunity, fetchMyProfile, getAuthToken, fetchBYOKSettings, saveBYOKSettings } from './api';
 import { useAuth } from './context/AuthContext';
 import './index.css';
 
 function AppContent() {
-  const { setAuth } = useAuth();
+  const { setAuth, isAuthenticated } = useAuth();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -197,7 +198,13 @@ function AppContent() {
               />
               <Route
                 path="/login"
-                element={<Navigate to="/signup" replace />}
+                element={
+                  isAuthenticated && profile ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <LoginPage onComplete={loadProfile} onToast={triggerToast} />
+                  )
+                }
               />
               <Route path="/about" element={<AboutPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

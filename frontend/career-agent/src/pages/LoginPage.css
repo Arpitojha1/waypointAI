@@ -1,0 +1,192 @@
+/* ==========================================================================
+   Waypoint AI - Login Page Styling (Premium Design Tokens)
+   ========================================================================== */
+
+.login-page-container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+  min-height: calc(100vh - 80px);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-card {
+  background: var(--color-void-black, #0e100f);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-card, 16px);
+  padding: 40px 36px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Glowing top accent border */
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-memify-violet, linear-gradient(90deg, #8a2be2, #00bae2));
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-title {
+  font-size: clamp(24px, 3.5vw, 30px);
+  font-weight: 600;
+  color: var(--color-cream-glow, #fff);
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: var(--color-ash-gray, #8a8f98);
+  line-height: 1.5;
+}
+
+.login-error-banner {
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-reject-red, #ff4b4b) 12%, transparent);
+  border: 1px solid var(--color-reject-red, #ff4b4b);
+  color: var(--color-reject-red, #ff4b4b);
+  font-size: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 24px;
+  line-height: 1.4;
+  animation: shake-login-error 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes shake-login-error {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.login-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-cream-glow, #fff);
+  font-family: var(--font-ui, sans-serif);
+}
+
+.login-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-input-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--color-ash-gray, #8a8f98);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s ease;
+}
+
+.login-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px 14px 12px 42px;
+  color: var(--color-cream-glow, #fff);
+  font-size: 14px;
+  font-family: var(--font-ui, sans-serif);
+  transition: all 0.2s ease;
+}
+
+.login-input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.login-input:focus {
+  outline: none;
+  border-color: var(--color-job-blue, #00bae2);
+  background: rgba(0, 186, 226, 0.05);
+  box-shadow: 0 0 0 3px rgba(0, 186, 226, 0.15);
+}
+
+.login-input:focus + .login-input-icon,
+.login-input-wrapper:focus-within .login-input-icon {
+  color: var(--color-job-blue, #00bae2);
+}
+
+.login-submit-btn {
+  width: 100%;
+  background: var(--color-job-blue, #00bae2);
+  color: #0e100f;
+  font-weight: 700;
+  font-size: 15px;
+  font-family: var(--font-ui, sans-serif);
+  border: none;
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.login-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 186, 226, 0.4);
+  background: #1ac7ed;
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 28px;
+  font-size: 14px;
+  color: var(--color-ash-gray, #8a8f98);
+}
+
+.login-link {
+  color: var(--color-job-blue, #00bae2);
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 6px;
+  transition: color 0.2s ease;
+}
+
+.login-link:hover {
+  text-decoration: underline;
+  color: #33cbee;
+}
