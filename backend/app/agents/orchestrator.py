@@ -316,6 +316,7 @@ async def generate_roadmap(
     roadmap_data: Optional[Dict[str, Any]] = None
     steps_data: List[Dict[str, Any]] = []
     outreach_data: List[Dict[str, Any]] = []
+    is_synthetic_fallback = False
 
     iterations = 0
     max_iterations = 8
@@ -333,12 +334,43 @@ async def generate_roadmap(
                     model=model_name,
                     messages=messages,
                     tools=ROADMAP_TOOLS,
-                    max_tokens=2200,
+                    max_tokens=4000,
                     temperature=0.2,
                 ),
                 timeout=30.0,
             )
-        except (asyncio.TimeoutError, Exception) as exc:
+        except asyncio.TimeoutError:
+            logger.warning("LLM call to %s timed out at 30s. Retrying same model at 45s...", model_name)
+            try:
+                response = await asyncio.wait_for(
+                    llm_client.chat.completions.create(
+                        model=model_name,
+                        messages=messages,
+                        tools=ROADMAP_TOOLS,
+                        max_tokens=4000,
+                        temperature=0.2,
+                    ),
+                    timeout=45.0,
+                )
+            except (asyncio.TimeoutError, Exception) as exc_retry:
+                logger.warning("Retry also failed for %s (%s). Trying free fallback model...", model_name, exc_retry)
+                try:
+                    fallback_model = "openai/gpt-oss-20b:free" if "gpt-oss" not in model_name else "nvidia/nemotron-3-super-120b-a12b:free"
+                    response = await asyncio.wait_for(
+                        llm_client.chat.completions.create(
+                            model=fallback_model,
+                            messages=messages,
+                            tools=ROADMAP_TOOLS,
+                            max_tokens=4000,
+                            temperature=0.2,
+                        ),
+                        timeout=45.0,
+                    )
+                    model_name = fallback_model
+                except Exception as exc2:
+                    logger.error("Error calling fallback LLM during roadmap generation: %s", exc2)
+                    break
+        except Exception as exc:
             logger.warning("Error calling LLM with %s (%s). Retrying with free fallback model...", model_name, exc)
             try:
                 fallback_model = "openai/gpt-oss-20b:free" if "gpt-oss" not in model_name else "nvidia/nemotron-3-super-120b-a12b:free"
@@ -347,10 +379,10 @@ async def generate_roadmap(
                         model=fallback_model,
                         messages=messages,
                         tools=ROADMAP_TOOLS,
-                        max_tokens=2200,
+                        max_tokens=4000,
                         temperature=0.2,
                     ),
-                    timeout=30.0,
+                    timeout=45.0,
                 )
                 model_name = fallback_model
             except Exception as exc2:
@@ -422,50 +454,104 @@ async def generate_roadmap(
         }
 
     if not steps_data:
-        logger.warning("LLM did not return step tool calls (likely 429 rate limit or timeout). Synthesizing heuristic roadmap steps.")
+        logger.warning(
+            "SYNTHETIC_FALLBACK: LLM did not return step tool calls (likely 429 rate limit or timeout). "
+            "opportunity.id=%s opportunity.type=%s — synthesizing heuristic roadmap steps.",
+            opportunity.id, opportunity.type.value,
+        )
+        is_synthetic_fallback = True
         if opportunity.type == OpportunityType.ISSUE:
+            repo_ref = f"{opportunity.repo_owner}/{opportunity.repo_name}" if opportunity.repo_owner else "the repository"
+            issue_ref = f"#{opportunity.issue_number}" if opportunity.issue_number else ""
+            opp_title = opportunity.title
+            opp_desc = (opportunity.description or "")[:200]
             steps_data = [
                 {
-                    "title": "Set Up Development Environment and Locate Database Connection Code",
-                    "description": f"Fork and clone repository {f'{opportunity.repo_owner}/{opportunity.repo_name}' if opportunity.repo_owner else ''}. Install dependencies and locate the configuration module where database connections and SQLAlchemy session pools are initialized.",
-                    "order_index": 1
+                    "title": f"Understand the Issue: {opp_title}",
+                    "description": f"Read the full issue description for {issue_ref} in {repo_ref} and any linked discussions. Identify the root cause, expected behaviour, and acceptance criteria.",
+                    "order_index": 1,
                 },
                 {
-                    "title": "Reproduce Connection Timeout Issue and Establish Baseline",
-                    "description": "Write a reproducing test script or simulate heavy load/timeout conditions to verify the current failure mode without retry logic.",
-                    "order_index": 2
+                    "title": f"Set Up Local Environment for {repo_ref}",
+                    "description": f"Fork and clone {repo_ref}, install dependencies, and verify the project builds and tests pass locally before making changes.",
+                    "order_index": 2,
                 },
                 {
-                    "title": "Implement Exponential Backoff Retry Logic",
-                    "description": "Modify the database connection pool creation logic to wrap connection attempts in an exponential backoff retry loop.",
-                    "order_index": 3
+                    "title": "Implement the Fix or Feature",
+                    "description": f"Write the code changes required to resolve \"{opp_title}\". Follow the repository's contributing guidelines, coding conventions, and existing patterns.",
+                    "order_index": 3,
                 },
                 {
-                    "title": "Add Unit and Integration Tests for Retry Mechanism",
-                    "description": "Write comprehensive automated unit tests simulating database connection dropouts to verify that backoff retries execute as expected.",
-                    "order_index": 4
+                    "title": "Write or Update Tests",
+                    "description": "Add unit/integration tests covering the new behaviour or the bug scenario to prevent regressions.",
+                    "order_index": 4,
                 },
                 {
-                    "title": "Validate Fix, Document Changes, and Submit Pull Request",
-                    "description": "Run the full repository test suite, document the new retry configuration options, and open a pull request referencing the issue.",
-                    "order_index": 5
-                }
+                    "title": "Open a Pull Request",
+                    "description": f"Run the full test suite, document the changes, and submit a PR referencing the original issue. Ensure the PR description links to {opportunity.url or issue_ref}.",
+                    "order_index": 5,
+                },
             ]
         elif opportunity.type == OpportunityType.HACKATHON:
+            opp_title = opportunity.title
+            deadline_str = str(opportunity.deadline) if opportunity.deadline else "the submission deadline"
             steps_data = [
-                {"title": "Team Formation and Idea Brainstorming", "description": f"Analyze requirements for {opportunity.title} and align team roles.", "order_index": 1},
-                {"title": "Architecture Setup and Prototyping", "description": "Set up project repo, CI/CD, and core backend/frontend scaffolding.", "order_index": 2},
-                {"title": "Core Feature Implementation", "description": "Implement the main value proposition and key user flows.", "order_index": 3},
-                {"title": "UI Polish and Demo Video Recording", "description": "Refine frontend styling and record a compelling 3-minute pitch video.", "order_index": 4},
-                {"title": "Final Submission and Project Documentation", "description": "Complete submission forms, README, and deploy live demo.", "order_index": 5}
+                {
+                    "title": f"Understand {opp_title} Requirements and Themes",
+                    "description": f"Read the hackathon rules, judging criteria, and submission deadline ({deadline_str}). Brainstorm project ideas that align with the themes.",
+                    "order_index": 1,
+                },
+                {
+                    "title": "Assemble Team and Define Scope",
+                    "description": "Assign team roles (frontend, backend, design), choose a tech stack, and lock the MVP scope to what can be shipped before the deadline.",
+                    "order_index": 2,
+                },
+                {
+                    "title": "Build Core Prototype",
+                    "description": "Implement the primary value proposition end-to-end: backend API, frontend UI, and any third-party integrations needed for the demo.",
+                    "order_index": 3,
+                },
+                {
+                    "title": "Polish UI and Prepare Demo",
+                    "description": "Refine styling, fix edge cases, and record a compelling demo video or prepare a live walkthrough.",
+                    "order_index": 4,
+                },
+                {
+                    "title": "Submit and Document",
+                    "description": f"Complete the {opp_title} submission form, write a clear README, deploy a live demo if possible, and push all code to the submission repository.",
+                    "order_index": 5,
+                },
             ]
         else:
+            opp_title = opportunity.title
+            company_ref = opportunity.company or "the target company"
+            location_ref = opportunity.location or "the listed location"
             steps_data = [
-                {"title": "Resume Tailoring and Skill Alignment", "description": f"Tailor resume highlights to match requirements for {opportunity.title}.", "order_index": 1},
-                {"title": "Company Research and Networking", "description": "Research team engineering blog and connect with current team members.", "order_index": 2},
-                {"title": "Application Submission and Follow-up", "description": "Submit referral or direct application with customized cover note.", "order_index": 3},
-                {"title": "Technical Interview Preparation", "description": "Review system design and data structures relevant to role domain.", "order_index": 4},
-                {"title": "Final Interviews and Offer Negotiation", "description": "Prepare behavioral stories and compensation benchmark data.", "order_index": 5}
+                {
+                    "title": f"Tailor Resume for {opp_title} at {company_ref}",
+                    "description": f"Align your resume highlights and cover letter to the specific qualifications listed for {opp_title} ({location_ref}). Emphasise matching skills and relevant projects.",
+                    "order_index": 1,
+                },
+                {
+                    "title": f"Research {company_ref} and the Role",
+                    "description": f"Study {company_ref}'s engineering blog, recent product launches, and the team you'd be joining. Prepare thoughtful questions for the interview.",
+                    "order_index": 2,
+                },
+                {
+                    "title": "Apply or Get a Referral",
+                    "description": f"Submit your application for {opp_title} or reach out to a current employee for a referral. Include a customised cover note.",
+                    "order_index": 3,
+                },
+                {
+                    "title": "Prepare Technical Interviews",
+                    "description": "Review system design, data structures, and domain-specific topics relevant to the role. Practice with timed mock interviews.",
+                    "order_index": 4,
+                },
+                {
+                    "title": "Final Interviews and Negotiation",
+                    "description": "Prepare behavioural STAR stories, research compensation benchmarks for the role and location, and be ready to negotiate an offer.",
+                    "order_index": 5,
+                },
             ]
 
     # Match steps against recalled memory (FIX 3)
@@ -543,6 +629,7 @@ async def generate_roadmap(
         title=roadmap_data.get("title", f"Roadmap for {opportunity.title}")[:500],
         summary=roadmap_data.get("summary", ""),
         version=1,
+        is_synthetic_fallback=is_synthetic_fallback,
     )
     session.add(roadmap)
     await session.flush()  # get roadmap.id

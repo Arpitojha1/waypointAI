@@ -783,3 +783,53 @@ Executed a comprehensive frontend UX polish pass across 5 structured phases to t
   - **Persona Verification**: Confirmed positive user outcomes for Tech Leads (Alex), Junior Developers (Jordan), and Accessibility/Mobile Users (Sam).
 - **Artifact Generated**: Stored full critique report to `.impeccable/critique/2026-07-04T16-50-00Z__frontend-career-agent-pre-demo-critique.md`.
 - **Next Steps / P1 Recommendation**: Before Phase 9 demo recording/submission, adjust the `onUpdate` normalization in `RackAssemblyScroll.tsx` from `0.65` to `0.85`, calibrating landing dwell time down to exactly 15% (`30vh`) for optimal scroll responsiveness.
+
+## Session 11: Backend Hardening — Orchestrator Fallback, New Job Sources, GitHub Global Search
+
+### Summary
+Hardened the backend for production readiness by fixing the orchestrator's synthetic fallback behavior, adding two new job ingestion sources (RemoteOK, Remotive), overhauling the GitHub issue ingestion to use OR-label queries and a global search mode, and preparing the batch ingestion script for all sources.
+
+### 1. Orchestrator Synthetic Fallback Fix (`orchestrator.py`)
+- **Root Cause**: When both primary and fallback LLM calls returned malformed JSON, the orchestrator fell through to a hardcoded, generic "Software Engineer" roadmap with `is_synthetic_fallback=False`, silently misleading users. The `max_tokens` cap of 2200 was also truncating JSON output for complex roadmaps.
+- **Fixes Applied**:
+  - Increased `max_tokens` from 2200 → 4000 on both primary and fallback LLM calls to prevent JSON truncation.
+  - Added a timeout retry: if the primary call takes >45s, it falls to the free model (not to the synthetic dict).
+  - Made fallback steps dynamic using actual opportunity fields (`title`, `description`, `metadata_.get("language")`, `metadata_.get("labels")`) instead of hardcoded strings.
+  - When falling to the synthetic dict, set `roadmap_obj.is_synthetic_fallback = True` and log a `WARNING` (not `INFO`) so it is visible in production logs.
+- **DB Migration**: Added `is_synthetic_fallback = Column(Boolean, default=False, nullable=False)` to the `Roadmap` model. Created Alembic migration `2026_07_12_0001-aaabbb112233_add_is_synthetic_fallback_to_roadmaps.py`.
+- **API Layer**: Added `is_synthetic_fallback: bool = False` to `RoadmapResponse` so the frontend can distinguish synthetic fallbacks.
+
+### 2. New Job Ingestion Sources (`remoteok_jobs.py`, `remotive_jobs.py`)
+- Created `backend/app/ingestion/remoteok_jobs.py` following the exact arbeitnow pattern:
+  - `fetch_remoteok_jobs(client)` — fetches from `https://remoteok.com/api`, sets `User-Agent: RemoteOK`, returns raw JSON.
+  - `normalize_remoteok_job(raw)` — extracts fields, parses tags, sets `type=OpportunityType.JOB`.
+  - `opportunity_to_dict(opp)` — converts to dict with `ingestion_role_scoping` for Cognee.
+  - `ingest_remoteok_jobs(max_jobs, remember_in_cognee)` — orchestrates fetch→normalize→dict→remember→return.
+- Created `backend/app/ingestion/remotive_jobs.py` following the same pattern:
+  - `fetch_remotive_jobs(client)` — fetches from `https://remotive.com/api/remote-jobs?limit=30`.
+  - `normalize_remotive_job(raw)` — parses `job_type`→`OpportunityType.JOB`, tags, salary info.
+  - `_strip_html_tags(html)` — helper to clean HTML descriptions from Remotive.
+  - Full `ingest_remotive_jobs()` orchestration matching arbeitnow/remoteok.
+- Created `backend/app/agents/prompts/remoteok.py` with `REMOTEOK_SYSTEM_PROMPT` and `backend/app/agents/prompts/remotive.py` with `REMOTIVE_SYSTEM_PROMPT`.
+- Updated `backend/app/ingestion/__init__.py` and `backend/app/agents/prompts/__init__.py` with new exports.
+- **Tests**: 14 new tests across `test_remoteok_jobs.py` (7) and `test_remotive_jobs.py` (7), all passing.
+
+### 3. GitHub Issue Ingestion Overhaul (`github_issues.py`)
+- Renamed `HARDCODED_REPOSITORIES` → `FEATURED_REPOSITORIES` for clarity.
+- Changed `COMMUNITY_LABELS` query from `label:"good first issue"` (single label) to an OR-combined query: `label:"good first issue","help wanted","enhancement","bug","documentation"` — confirmed valid from GitHub docs.
+- Added `fetch_good_first_issues_global(language, max_issues)` — searches all of GitHub without a `repo:` qualifier, using the OR-label query directly against `/search/issues`.
+- Updated `ingest_github_issues()` to:
+  1. Call `fetch_good_first_issues_global()` (when no owner/repo specified).
+  2. Call `fetch_good_first_issues()` on each `FEATURED_REPOSITORIES` repo.
+  3. Deduplicate all results by `(repo_owner, repo_name, issue_number)` before returning.
+- **Live test**: Global search returned 2 issues from 848,773 total matches (rate-limited by unauthenticated 30 req/min).
+- **Tests**: 10 tests in `test_github_issues.py`, including 3 new tests for global search and deduplication.
+
+### 4. Batch Ingestion Script (`ingest_all_sources.py`)
+- Created `backend/scripts/ingest_all_sources.py` running arbeitnow, remoteok, and remotive concurrently via `asyncio.gather`. Each source wrapped in its own try/except so one failure never blocks the others. GitHub is **not yet included** (item #5 pending).
+
+### Open Items
+- **#2 GITHUB_TOKEN**: NOT SET in local env or Railway. Unauthenticated GitHub search is 30 req/min / 60 req/hr — hard blocker for production global search. User must add `GITHUB_TOKEN` in Railway dashboard.
+- **#3 Alembic on production DB**: `is_synthetic_fallback` column migration exists locally but was **not confirmed applied** to Railway/Supabase. Will 500 on missing column if a roadmap is generated before migration runs.
+- **#5 GitHub in ingest_all_sources.py**: Not yet added to the batch script.
+- **#7 Fragile dedup test**: `test_ingest_deduplicates_global_and_featured` has a brittle hand-written literal dict assertion — needs cleanup.

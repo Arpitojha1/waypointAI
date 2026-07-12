@@ -57,6 +57,7 @@ class RoadmapResponse(BaseModel):
     title: str
     summary: Optional[str]
     version: int
+    is_synthetic_fallback: bool = False
     created_at: datetime
     steps: List[StepResponse] = []
 

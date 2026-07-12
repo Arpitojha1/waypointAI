@@ -177,6 +177,9 @@ class Roadmap(Base):
     # Phase 3: Track whether Cognee memory seeding is complete for this roadmap
     cognee_seeded: Mapped[bool] = mapped_column(default=False, server_default=text('false'))
 
+    # Track whether roadmap steps were synthetically generated (LLM fallback)
+    is_synthetic_fallback: Mapped[bool] = mapped_column(default=False, server_default=text('false'))
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
