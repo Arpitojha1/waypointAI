@@ -80,6 +80,20 @@ This runs all nine lifecycle steps (remember, recall, positive/negative feedback
 
 > **Windows users:** if async Cognee/LLM calls fail with a DNS-looking error even though plain HTTP requests work, uninstall `aiodns` (`pip uninstall aiodns -y`). It's incompatible with `ProactorEventLoop` and is usually pulled in as a transitive dependency, not something you installed on purpose.
 
+### End-to-end walkthrough
+
+Once the stack is running, open `http://localhost:5173` and follow these steps:
+
+1. **Sign up or log in** — click **Sign Up** in the nav bar. The four-step stepper walks you through: create a Supabase Auth account (email + password), set your display name and username, enter your technical skills (comma-separated, with quick-add pills for React, TypeScript, Python, etc.), and write a brief experience summary & career goals. All four steps submit in a single `POST /api/profile/seed` call on the last step. If you already have an account, click **Log In** instead.
+2. **Connect your own API key (optional)** — click the **LLM: nemotron-3-super (free)** button in the nav bar to open the "LLM & BYOK Configuration" modal. Paste your OpenRouter API key, optionally set a custom model ID and endpoint. Your key is encrypted at rest via PostgreSQL's `pgcrypto` extension (`pgp_sym_encrypt`) — never stored in plaintext. Leave all fields blank to use the server default.
+3. **Browse opportunities** — the dashboard loads opportunities from five sources: GitHub good-first-issues, Devpost hackathons, and job boards (Arbeitnow, RemoteOK, Remotive). Use the filter buttons (**All Opportunities**, **Jobs**, **Hackathons**, **GitHub Issues**) to narrow results, or click **Refresh** to re-fetch.
+4. **Generate a roadmap** — click the **Roadmap →** button on any opportunity card. Waypoint first checks for a cached roadmap; if none exists, the AI orchestrator generates a personalized, multi-step roadmap tailored to your profile and saves it to Cognee memory. You'll see a toast like "Orchestrating career roadmap with ..." while it runs.
+5. **Work through your roadmap** — the roadmap view shows your ordered steps, a progress tracker, and a strategy summary. For each step you can:
+   - Click **Mark Done** to accept it (triggers Cognee `improve` with positive feedback).
+   - Click **Not Relevant** to skip/reject it (triggers Cognee `forget`).
+   - Click the pencil icon to edit the description, then **Save & Adapt** to feed the edit diff back into Cognee.
+6. **Watch memify adapt** — after you mark steps done or rejected, Cognee's memory graph updates and the roadmap reorders itself: accepted steps rise, rejected steps sink. Steps adapted by Cognee display a **✨ adapted** badge. (Note: when Cognee-native `recall()` is unavailable — see [Known limitations](#known-limitations--honest-caveats) — a Postgres-backed fallback handles reordering instead.)
+
 ---
 
 ## What it does
